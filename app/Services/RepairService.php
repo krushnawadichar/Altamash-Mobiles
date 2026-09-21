@@ -2,300 +2,232 @@
 
 namespace App\Services;
 
-use App\Models\Repair;
-use App\Repositories\RepairRepository;
-use App\Services\CustomerService;
-use Illuminate\Support\Str;
+use App\Models\ActivityLog;
+use App\Models\Customer;
+use App\Models\Product;
+use App\Models\RepairJob;
+use App\Models\RepairPartUsed;
+use App\Models\RepairPayment;
+use App\Models\RepairStatusLog;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Exception;
 
 class RepairService
 {
-    protected $repairRepository;
-    protected $customerService;
+    protected InventoryService $inventoryService;
 
-    public function __construct(RepairRepository $repairRepository, CustomerService $customerService)
+    public function __construct(InventoryService $inventoryService)
     {
-        $this->repairRepository = $repairRepository;
-        $this->customerService = $customerService;
+        $this->inventoryService = $inventoryService;
     }
 
-    public function getAllRepairs()
-    {
-        return $this->repairRepository->getWithRelations();
-    }
-
-    public function getRepairById($id)
-    {
-        return $this->repairRepository->find($id);
-    }
-
-    public function createRepair(array $data)
-    {
-        return DB::transaction(function () use ($data) {
-            // Handle customer
-            $customerId = $this->handleCustomer($data);
-
-            // Calculate remaining amount
-            $estimatedCost = $data['estimated_cost'] ?? 0;
-            $advancePaid = $data['advance_paid'] ?? 0;
-            $remainingAmount = $estimatedCost - $advancePaid;
-
-            $repairData = [
-                'repair_number' => $this->generateRepairNumber(),
-                'customer_id' => $customerId,
-                'customer_name' => $data['customer_name'] ?? '',
-                'customer_mobile' => $data['customer_mobile'] ?? '',
-                'device_name' => $data['device_name'],
-                'imei' => $data['imei'] ?? null,
-                'issue' => $data['issue'],
-                'accessories_received' => $data['accessories_received'] ?? null,
-                'estimated_cost' => $estimatedCost,
-                'advance_paid' => $advancePaid,
-                'remaining_amount' => $remainingAmount,
-                'engineer_notes' => $data['engineer_notes'] ?? null,
-                'repair_status_id' => $data['repair_status_id'],
-                'receive_date' => $data['receive_date'],
-                'delivery_date' => $data['delivery_date'] ?? null,
-                'payment_status' => $this->getPaymentStatus($advancePaid, $estimatedCost),
-                'created_by' => auth()->id(),
-            ];
-
-            // Handle images
-            if (isset($data['images']) && $data['images']) {
-                $images = [];
-                foreach ($data['images'] as $image) {
-                    $images[] = $this->uploadImage($image);
-                }
-                $repairData['images'] = $images;
-            }
-
-            // Handle documents
-            if (isset($data['documents']) && $data['documents']) {
-                $documents = [];
-                foreach ($data['documents'] as $document) {
-                    $documents[] = $this->uploadDocument($document);
-                }
-                $repairData['documents'] = $documents;
-            }
-
-            return $this->repairRepository->create($repairData);
-        });
-    }
-
-    public function updateRepair($id, array $data)
-    {
-        return DB::transaction(function () use ($id, $data) {
-            $repair = $this->repairRepository->find($id);
-
-            // Handle customer
-            if (isset($data['customer_id']) || isset($data['customer_name'])) {
-                $customerId = $this->handleCustomer($data);
-                $data['customer_id'] = $customerId;
-            }
-
-            // Calculate remaining amount
-            $estimatedCost = $data['estimated_cost'] ?? $repair->estimated_cost;
-            $advancePaid = $data['advance_paid'] ?? $repair->advance_paid;
-            $data['remaining_amount'] = $estimatedCost - $advancePaid;
-            $data['payment_status'] = $this->getPaymentStatus($advancePaid, $estimatedCost);
-
-            // Handle images
-            if (isset($data['images']) && $data['images']) {
-                // Delete old images
-                if ($repair->images) {
-                    foreach ($repair->images as $oldImage) {
-                        Storage::delete('public/' . $oldImage);
-                    }
-                }
-                $images = [];
-                foreach ($data['images'] as $image) {
-                    $images[] = $this->uploadImage($image);
-                }
-                $data['images'] = $images;
-            }
-
-            // Handle documents
-            if (isset($data['documents']) && $data['documents']) {
-                // Delete old documents
-                if ($repair->documents) {
-                    foreach ($repair->documents as $oldDocument) {
-                        Storage::delete('public/' . $oldDocument);
-                    }
-                }
-                $documents = [];
-                foreach ($data['documents'] as $document) {
-                    $documents[] = $this->uploadDocument($document);
-                }
-                $data['documents'] = $documents;
-            }
-
-            return $this->repairRepository->update($repair, $data);
-        });
-    }
-
-    public function deleteRepair($id)
-    {
-        return DB::transaction(function () use ($id) {
-            $repair = $this->repairRepository->find($id);
-
-            // Delete images
-            if ($repair->images) {
-                foreach ($repair->images as $image) {
-                    Storage::delete('public/' . $image);
-                }
-            }
-
-            // Delete documents
-            if ($repair->documents) {
-                foreach ($repair->documents as $document) {
-                    Storage::delete('public/' . $document);
-                }
-            }
-
-            return $this->repairRepository->delete($repair);
-        });
-    }
-
-    public function updateStatus($id, $statusId)
-    {
-        $repair = $this->repairRepository->find($id);
-        $repair->repair_status_id = $statusId;
-
-        // If status is completed or delivered, set delivery date
-        $status = \App\Models\RepairStatus::find($statusId);
-        if ($status && in_array($status->name, ['Completed', 'Delivered'])) {
-            $repair->delivery_date = now()->format('Y-m-d');
-        }
-
-        return $repair->save();
-    }
-
-    protected function handleCustomer($data)
-    {
-        if (isset($data['customer_id']) && $data['customer_id']) {
-            return $data['customer_id'];
-        }
-
-        if (isset($data['customer_name']) && $data['customer_name']) {
-            // Check if customer exists by phone
-            $customer = null;
-            if (isset($data['customer_mobile'])) {
-                $customer = $this->customerService->getCustomerByPhone($data['customer_mobile']);
-            }
-
-            if (!$customer) {
-                $customer = $this->customerService->createCustomer([
-                    'name' => $data['customer_name'],
-                    'email' => 'repair_' . time() . '@example.com',
-                    'phone' => $data['customer_mobile'] ?? 'N/A',
-                    'address' => $data['customer_address'] ?? null,
-                    'is_active' => true,
-                ]);
-            }
-
-            return $customer->id;
-        }
-
-        return null;
-    }
-
-    protected function getPaymentStatus($paid, $total)
-    {
-        if ($paid >= $total && $total > 0) {
-            return 'paid';
-        } elseif ($paid > 0) {
-            return 'partial';
-        }
-        return 'pending';
-    }
-
-    protected function generateRepairNumber()
+    public function generateRepairNo(): string
     {
         $prefix = 'REP';
         $year = date('Y');
-        $month = date('m');
-        $lastRepair = Repair::orderBy('id', 'desc')->first();
-        $number = $lastRepair ? intval(substr($lastRepair->repair_number, -4)) + 1 : 1;
+        $last = RepairJob::where('repair_no', 'like', "{$prefix}-{$year}-%")
+            ->orderBy('id', 'desc')
+            ->first();
 
-        return $prefix . '-' . $year . $month . str_pad($number, 4, '0', STR_PAD_LEFT);
+        $nextNumber = 1;
+        if ($last) {
+            $parts = explode('-', $last->repair_no);
+            if (count($parts) === 3) {
+                $nextNumber = intval($parts[2]) + 1;
+            }
+        }
+
+        return sprintf("%s-%s-%06d", $prefix, $year, $nextNumber);
     }
 
-    protected function uploadImage($image)
+    public function createRepairJob(array $data): RepairJob
     {
-        $filename = time() . '_' . Str::random(10) . '.' . $image->getClientOriginalExtension();
-        return $image->storeAs('repairs/images', $filename, 'public');
+        return DB::transaction(function () use ($data) {
+            $repairNo = $this->generateRepairNo();
+            $customerMobile = $data['customer_mobile'];
+            $customerName = $data['customer_name'];
+
+            $customer = Customer::firstOrCreate(
+                ['mobile' => $customerMobile],
+                ['name' => $customerName]
+            );
+
+            $estimatedCost = floatval($data['estimated_cost'] ?? 0);
+            $finalCost = floatval($data['final_cost'] ?? $estimatedCost);
+            $advanceAmount = floatval($data['advance_amount'] ?? 0);
+            $dueAmount = max(0.00, $finalCost - $advanceAmount);
+
+            $repair = RepairJob::create([
+                'repair_no' => $repairNo,
+                'customer_id' => $customer->id,
+                'customer_name' => $customerName,
+                'customer_mobile' => $customerMobile,
+                'brand_id' => $data['brand_id'] ?? null,
+                'model_name' => $data['model_name'],
+                'imei' => $data['imei'] ?? null,
+                'serial_no' => $data['serial_no'] ?? null,
+                'color' => $data['color'] ?? null,
+                'problem_complaint' => $data['problem_complaint'],
+                'physical_condition' => $data['physical_condition'] ?? null,
+                'accessories_received' => $data['accessories_received'] ?? null,
+                'estimated_cost' => $estimatedCost,
+                'final_cost' => $finalCost,
+                'advance_amount' => $advanceAmount,
+                'paid_amount' => $advanceAmount,
+                'due_amount' => $dueAmount,
+                'technician_id' => $data['technician_id'] ?? null,
+                'status' => 'Received',
+                'received_date' => now(),
+                'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
+                'warranty_days' => intval($data['warranty_days'] ?? 0),
+                'notes' => $data['notes'] ?? null,
+                'created_by' => Auth::id(),
+            ]);
+
+            RepairStatusLog::create([
+                'repair_job_id' => $repair->id,
+                'from_status' => 'New',
+                'to_status' => 'Received',
+                'notes' => 'Job Card created',
+                'created_by' => Auth::id(),
+            ]);
+
+            if ($advanceAmount > 0) {
+                RepairPayment::create([
+                    'repair_job_id' => $repair->id,
+                    'payment_date' => now()->toDateString(),
+                    'amount' => $advanceAmount,
+                    'payment_type' => 'advance',
+                    'payment_method' => $data['payment_method'] ?? 'cash',
+                    'transaction_ref' => $data['transaction_ref'] ?? null,
+                    'notes' => 'Advance payment received on intake',
+                    'created_by' => Auth::id(),
+                ]);
+            }
+
+            ActivityLog::log(
+                action: 'REPAIR_CREATED',
+                module: 'repairs',
+                recordId: $repair->id,
+                description: "Repair Job Card created: {$repair->repair_no} for {$repair->customer_name} ({$repair->model_name})"
+            );
+
+            return $repair;
+        });
     }
 
-    protected function uploadDocument($document)
+    public function addPartUsed(RepairJob $repair, int $productId, int $quantity = 1, ?float $unitPrice = null): RepairPartUsed
     {
-        $filename = time() . '_' . Str::random(10) . '.' . $document->getClientOriginalExtension();
-        return $document->storeAs('repairs/documents', $filename, 'public');
+        return DB::transaction(function () use ($repair, $productId, $quantity, $unitPrice) {
+            $product = Product::lockForUpdate()->findOrFail($productId);
+
+            if ($product->current_stock < $quantity) {
+                throw new Exception("Insufficient stock for spare part: {$product->name}. In stock: {$product->current_stock}");
+            }
+
+            $price = $unitPrice !== null ? $unitPrice : $product->selling_price;
+            $subtotal = $price * $quantity;
+
+            $partUsed = RepairPartUsed::create([
+                'repair_job_id' => $repair->id,
+                'product_id' => $product->id,
+                'quantity' => $quantity,
+                'unit_cost' => $product->purchase_price,
+                'unit_price' => $price,
+                'subtotal' => $subtotal,
+            ]);
+
+            // Deduct stock immediately
+            $this->inventoryService->recordMovement(
+                product: $product,
+                transactionType: 'REPAIR_PART_USED',
+                quantityChange: -$quantity,
+                referenceId: $repair->id,
+                referenceType: 'RepairJob',
+                serial: null,
+                unitCost: $product->purchase_price,
+                notes: "Used in Repair: {$repair->repair_no}"
+            );
+
+            // Recalculate repair final cost
+            $totalPartsCost = $repair->partsUsed()->sum('subtotal');
+            if ($totalPartsCost > $repair->final_cost) {
+                $repair->final_cost = $totalPartsCost;
+            }
+            $repair->due_amount = max(0.00, $repair->final_cost - $repair->paid_amount);
+            $repair->save();
+
+            ActivityLog::log(
+                action: 'REPAIR_PART_ADDED',
+                module: 'repairs',
+                recordId: $repair->id,
+                description: "Added spare part {$product->name} (Qty: {$quantity}) to Repair: {$repair->repair_no}"
+            );
+
+            return $partUsed;
+        });
     }
 
-    public function getPendingRepairs()
+    public function updateStatus(RepairJob $repair, string $newStatus, ?string $notes = null): void
     {
-        return $this->repairRepository->getPending();
+        $oldStatus = $repair->status;
+        if ($oldStatus === $newStatus) {
+            return;
+        }
+
+        $repair->status = $newStatus;
+
+        if ($newStatus === 'Repair Completed') {
+            $repair->completed_date = now();
+        } elseif ($newStatus === 'Delivered') {
+            $repair->delivered_date = now();
+        }
+
+        $repair->save();
+
+        RepairStatusLog::create([
+            'repair_job_id' => $repair->id,
+            'from_status' => $oldStatus,
+            'to_status' => $newStatus,
+            'notes' => $notes,
+            'created_by' => Auth::id(),
+        ]);
+
+        ActivityLog::log(
+            action: 'REPAIR_STATUS_CHANGED',
+            module: 'repairs',
+            recordId: $repair->id,
+            description: "Repair {$repair->repair_no} status changed: {$oldStatus} -> {$newStatus}"
+        );
     }
 
-    public function getCompletedRepairs()
+    public function addPayment(RepairJob $repair, float $amount, string $method = 'cash', string $type = 'partial', ?string $ref = null, ?string $notes = null): RepairPayment
     {
-        return $this->repairRepository->getCompleted();
-    }
+        return DB::transaction(function () use ($repair, $amount, $method, $type, $ref, $notes) {
+            $payment = RepairPayment::create([
+                'repair_job_id' => $repair->id,
+                'payment_date' => now()->toDateString(),
+                'amount' => $amount,
+                'payment_type' => $type,
+                'payment_method' => $method,
+                'transaction_ref' => $ref,
+                'notes' => $notes,
+                'created_by' => Auth::id(),
+            ]);
 
-    public function getRepairsByCustomer($customerId)
-    {
-        return $this->repairRepository->getByCustomer($customerId);
-    }
+            $repair->paid_amount += $amount;
+            $repair->due_amount = max(0.00, $repair->final_cost - $repair->paid_amount);
+            $repair->save();
 
-    public function getRepairsByStatus($statusId)
-    {
-        return $this->repairRepository->getByStatus($statusId);
-    }
+            ActivityLog::log(
+                action: 'REPAIR_PAYMENT_RECEIVED',
+                module: 'repairs',
+                recordId: $repair->id,
+                description: "Repair {$repair->repair_no} payment received: ₹" . number_format($amount, 2)
+            );
 
-    public function getRepairsByDateRange($startDate, $endDate)
-    {
-        return $this->repairRepository->getByDateRange($startDate, $endDate);
-    }
-
-    public function getPendingPayments()
-    {
-        return $this->repairRepository->getPendingPayments();
-    }
-
-    public function searchRepairs($query)
-    {
-        return $this->repairRepository->search($query);
-    }
-
-    public function getTotalRepairs($startDate = null, $endDate = null)
-    {
-        return $this->repairRepository->getTotalRepairs($startDate, $endDate);
-    }
-
-    public function getTotalRevenue($startDate = null, $endDate = null)
-    {
-        return $this->repairRepository->getTotalRevenue($startDate, $endDate);
-    }
-
-    public function getRecentRepairs($limit = 10)
-    {
-        return $this->repairRepository->getRecentRepairs($limit);
-    }
-
-    public function getRepairStatistics()
-    {
-        $total = $this->repairRepository->count();
-        $pending = $this->repairRepository->getPending()->count();
-        $completed = $this->repairRepository->getCompleted()->count();
-        $cancelled = $this->repairRepository->getCancelled()->count();
-
-        return [
-            'total' => $total,
-            'pending' => $pending,
-            'completed' => $completed,
-            'cancelled' => $cancelled,
-            'completion_rate' => $total > 0 ? round(($completed / $total) * 100, 2) : 0,
-        ];
+            return $payment;
+        });
     }
 }

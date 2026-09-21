@@ -1,85 +1,146 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
-@section('title', 'Categories - Altamash Mobiles')
+@section('title', 'Category Management')
+@section('page_title', 'Product Categories')
 
 @section('content')
-<div class="py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold">
-            <i class="fas fa-tags me-2 text-primary"></i> Categories
-        </h2>
-        <a href="{{ route('admin.categories.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus-circle me-1"></i> Add Category
-        </a>
+<div class="container-fluid px-0">
+
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h4 class="fw-bold mb-0">Categories</h4>
+            <small class="text-muted">Organize your phones, accessories, and spare parts</small>
+        </div>
+        <button class="btn btn-primary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+            <i class="bi bi-plus-lg me-1"></i> Add Category
+        </button>
     </div>
 
     <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover datatable">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Name</th>
-                            <th>Slug</th>
-                            <th>Description</th>
-                            <th>Status</th>
-                            <th>Created At</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($categories as $category)
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>
-                                    @if($category->icon)
-                                        <i class="{{ $category->icon }} me-2"></i>
-                                    @endif
-                                    {{ $category->name }}
-                                </td>
-                                <td>{{ $category->slug }}</td>
-                                <td>{{ Str::limit($category->description, 50) }}</td>
-                                <td>
-                                    @if($category->is_active)
-                                        <span class="badge bg-success">Active</span>
-                                    @else
-                                        <span class="badge bg-danger">Inactive</span>
-                                    @endif
-                                </td>
-                                <td>{{ $category->created_at->format('d M, Y') }}</td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('admin.categories.edit', $category->id) }}" 
-                                           class="btn btn-warning me-2">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <form action="{{ route('admin.categories.destroy', $category->id) }}" 
-                                              method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger" 
-                                                    onclick="return confirm('Are you sure?')">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
+        <div class="table-responsive">
+            <table class="table datatable table-hover align-middle mb-0" style="font-size: 0.88rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th>Category Name</th>
+                        <th>Slug</th>
+                        <th>Description</th>
+                        <th>Total Products</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($categories as $category)
+                    <tr>
+                        <td class="fw-bold text-dark">{{ $category->name }}</td>
+                        <td><code>{{ $category->slug }}</code></td>
+                        <td class="text-muted">{{ $category->description ?: '-' }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ $category->products_count }} Products</span></td>
+                        <td>
+                            <span class="badge {{ $category->status === 'active' ? 'bg-success' : 'bg-secondary' }}">
+                                {{ ucfirst($category->status) }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-light border py-0 px-2" data-bs-toggle="modal" data-bs-target="#editModal{{ $category->id }}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form action="{{ route('admin.categories.destroy', $category) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this category?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-light text-danger border py-0 px-2">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    <!-- Edit Modal -->
+                    <div class="modal fade" id="editModal{{ $category->id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form action="{{ route('admin.categories.update', $category) }}" method="POST">
+                                    @csrf
+                                    @method('PUT')
+                                    <div class="modal-header">
+                                        <h5 class="modal-title fw-bold">Edit Category</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center py-4">
-                                    <i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i>
-                                    <p class="text-muted">No categories found.</p>
-                                    <a href="{{ route('admin.categories.create') }}" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-plus-circle me-1"></i> Add Category
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-semibold small">Category Name</label>
+                                            <input type="text" name="name" class="form-control" value="{{ $category->name }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-semibold small">Description</label>
+                                            <textarea name="description" class="form-control" rows="2">{{ $category->description }}</textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-semibold small">Status</label>
+                                            <select name="status" class="form-select">
+                                                <option value="active" {{ $category->status === 'active' ? 'selected' : '' }}>Active</option>
+                                                <option value="inactive" {{ $category->status === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-primary fw-bold">Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No categories found.</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if($categories->hasPages())
+        <div class="card-footer bg-white py-2">
+            {{ $categories->links() }}
+        </div>
+        @endif
+    </div>
+
+</div>
+
+<!-- Create Category Modal -->
+<div class="modal fade" id="createCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ route('admin.categories.store') }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Create New Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Category Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Smart Watches or Wireless Chargers" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Description</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Brief category description..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="active" selected>Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary fw-bold">Create Category</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

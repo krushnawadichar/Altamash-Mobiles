@@ -4,32 +4,29 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Expense extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'expense_category_id',
-        'title',
         'amount',
-        'expense_date',
-        'description',
-        'receipt',
+        'date',
         'payment_method',
-        'status',
-        'created_by'
+        'description',
+        'attachment',
+        'created_by',
     ];
 
     protected $casts = [
+        'date' => 'date',
         'amount' => 'decimal:2',
-        'expense_date' => 'date',
     ];
 
-    public function expenseCategory()
+    public function category()
     {
-        return $this->belongsTo(ExpenseCategory::class);
+        return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
     }
 
     public function creator()

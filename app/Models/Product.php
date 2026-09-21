@@ -4,110 +4,161 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
-        'name',
-        'slug',
         'sku',
-        'barcode',
-        'imei',
-        'category_id',
+        'name',
+        'type', // mobile, accessory, spare_part
         'brand_id',
-        'supplier_id',
-        'unit_id',
-        'product_type_id',
-        'mobile_company_id',
+        'category_id',
+        'sub_category_id',
+        'model_no',
+        'barcode',
         'purchase_price',
         'selling_price',
-        'gst_percentage',
-        'tax_amount',
-        'color',
-        'storage',
-        'ram',
-        'description',
-        'minimum_stock',
+        'wholesale_price',
+        'mrp',
+        'tax_percent',
+        'min_stock',
         'current_stock',
         'image',
+        'description',
         'status',
-        'is_active',
-        'created_by'
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
         'purchase_price' => 'decimal:2',
         'selling_price' => 'decimal:2',
-        'gst_percentage' => 'decimal:2',
-        'tax_amount' => 'decimal:2',
+        'wholesale_price' => 'decimal:2',
+        'mrp' => 'decimal:2',
+        'tax_percent' => 'decimal:2',
+        'min_stock' => 'integer',
+        'current_stock' => 'integer',
     ];
-
-    public function category()
-    {
-        return $this->belongsTo(Category::class);
-    }
 
     public function brand()
     {
         return $this->belongsTo(Brand::class);
     }
 
-    public function supplier()
+    public function category()
     {
-        return $this->belongsTo(Supplier::class);
+        return $this->belongsTo(Category::class);
     }
 
-    public function unit()
+    public function subcategory()
     {
-        return $this->belongsTo(Unit::class);
+        return $this->belongsTo(Category::class, 'sub_category_id');
     }
 
-    public function productType()
+    public function serials()
     {
-        return $this->belongsTo(ProductType::class);
+        return $this->hasMany(ProductSerial::class);
     }
 
-    public function mobileCompany()
+    public function availableSerials()
     {
-        return $this->belongsTo(MobileCompany::class);
+        return $this->hasMany(ProductSerial::class)->where('status', 'available');
     }
 
-    public function purchaseDetails()
+    public function soldSerials()
     {
-        return $this->morphMany(PurchaseDetail::class, 'purchasable');
+        return $this->hasMany(ProductSerial::class)->where('status', 'sold');
     }
 
-    public function saleDetails()
+    public function inventoryTransactions()
     {
-        return $this->morphMany(SaleDetail::class, 'sellable');
+        return $this->hasMany(InventoryTransaction::class);
     }
 
-    public function inventories()
+    public function purchaseItems()
     {
-        return $this->morphMany(Inventory::class, 'inventoriable');
+        return $this->hasMany(PurchaseItem::class);
     }
 
-    public function creator()
+    public function saleItems()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->hasMany(SaleItem::class);
+    }
+
+    public function isMobile(): bool
+    {
+        return $this->type === 'mobile';
+    }
+
+    public function isAccessory(): bool
+    {
+        return $this->type === 'accessory';
+    }
+
+    public function isSparePart(): bool
+    {
+        return $this->type === 'spare_part';
+    }
+
+    public function getStockStatusAttribute(): string
+    {
+        if ($this->current_stock <= 0) {
+            return 'Out of Stock';
+        }
+
+        if ($this->current_stock <= $this->min_stock) {
+            return 'Low Stock';
+        }
+
+        return 'In Stock';
+    }
+
+    public function getStockBadgeClassAttribute(): string
+    {
+        if ($this->current_stock <= 0) {
+            return 'bg-danger';
+        }
+
+        if ($this->current_stock <= $this->min_stock) {
+            return 'bg-warning text-dark';
+        }
+
+        return 'bg-success';
     }
 
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('status', 'active');
     }
 
     public function scopeLowStock($query)
     {
-        return $query->whereColumn('current_stock', '<=', 'minimum_stock');
+        return $query->whereColumn('current_stock', '<=', 'min_stock')->where('current_stock', '>', 0);
     }
 
     public function scopeOutOfStock($query)
     {
         return $query->where('current_stock', '<=', 0);
+    }
+
+    public function scopeSearch($query, $term)
+    {
+        return $query->where(function ($q) use ($term) {
+            $q->where('name', 'like', "%{$term}%")
+              ->orWhere('sku', 'like', "%{$term}%")
+              ->orWhere('barcode', 'like', "%{$term}%")
+              ->orWhere('model_no', 'like', "%{$term}%")
+              ->orWhereHas('brand', function ($b) use ($term) {
+                  $b->where('name', 'like', "%{$term}%");
+              })
+              ->orWhereHas('category', function ($c) use ($term) {
+                  $c->where('name', 'like', "%{$term}%");
+              })
+              ->orWhereHas('serials', function ($s) use ($term) {
+                  $s->where('imei_1', 'like', "%{$term}%")
+                    ->orWhere('imei_2', 'like', "%{$term}%")
+                    ->orWhere('serial_no', 'like', "%{$term}%");
+              });
+        });
     }
 }

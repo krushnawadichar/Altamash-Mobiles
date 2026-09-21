@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class RepairPartUsed extends Model
+{
+    use HasFactory;
+
+    protected $table = 'repair_parts_used';
+
+    protected $fillable = [
+        'repair_job_id',
+        'product_id',
+        'quantity',
+        'unit_cost',
+        'unit_price',
+        'subtotal',
+    ];
+
+    protected $casts = [
+        'quantity' => 'integer',
+        'unit_cost' => 'decimal:2',
+        'unit_price' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+    ];
+
+    public function repairJob()
+    {
+        return $this->belongsTo(RepairJob::class);
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+}

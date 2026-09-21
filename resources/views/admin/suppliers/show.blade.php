@@ -1,128 +1,141 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
-@section('title', $supplier->name . ' - Altamash Mobiles')
+@section('title', 'Supplier Profile - ' . $supplier->name)
+@section('page_title', 'Supplier Ledger & Orders')
 
 @section('content')
-<div class="py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold">
-            <i class="fas fa-truck me-2 text-primary"></i> Supplier Details
-        </h2>
+<div class="container-fluid px-0">
+
+    <div class="d-flex align-items-center justify-content-between mb-3">
         <div>
-            <a href="{{ route('admin.suppliers.edit', $supplier->id) }}" class="btn btn-warning">
-                <i class="fas fa-edit me-1"></i> Edit
+            <h4 class="fw-bold mb-0">{{ $supplier->name }}</h4>
+            <small class="text-muted">{{ $supplier->company_name ?: 'Distributor' }} &bull; GSTIN: {{ $supplier->gst_number ?: '-' }}</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ route('admin.purchases.create') }}" class="btn btn-primary btn-sm fw-bold">
+                <i class="bi bi-cart-plus me-1"></i> New Purchase Order
             </a>
-            <a href="{{ route('admin.suppliers.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Back
+            <a href="{{ route('admin.suppliers.index') }}" class="btn btn-light border btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back
             </a>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <table class="table table-borderless">
-                        <tr>
-                            <td class="fw-bold text-muted" style="width: 150px;">Name</td>
-                            <td>{{ $supplier->name }}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold text-muted">Company</td>
-                            <td>{{ $supplier->company_name ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold text-muted">Email</td>
-                            <td>{{ $supplier->email }}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold text-muted">Phone</td>
-                            <td>{{ $supplier->phone }}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold text-muted">Alternative Phone</td>
-                            <td>{{ $supplier->alternative_phone ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold text-muted">Address</td>
-                            <td>{{ $supplier->address }}</td>
-                        </tr>
-                    </table>
+    <!-- Summary Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="text-muted small">Total Purchases</div>
+                <h4 class="fw-bold mb-0 mt-1">₹{{ number_format($supplier->total_purchases, 2) }}</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="text-muted small">Total Paid Amount</div>
+                <h4 class="fw-bold mb-0 mt-1 text-success">₹{{ number_format($supplier->total_paid, 2) }}</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="text-muted small">Outstanding Balance (Payable)</div>
+                <h4 class="fw-bold mb-0 mt-1 text-danger">₹{{ number_format($supplier->current_balance, 2) }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Purchase Orders History -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white">
+                    <span class="fw-bold"><i class="bi bi-bag-check me-1 text-primary"></i>Purchase Orders ({{ $supplier->purchases->count() }})</span>
                 </div>
-                <div class="col-md-6">
-                    <table class="table table-borderless">
-                        <tr>
-                            <td class="fw-bold text-muted" style="width: 150px;">GST Number</td>
-                            <td>{{ $supplier->gst_number ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold text-muted">PAN Number</td>
-                            <td>{{ $supplier->pan_number ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold text-muted">Opening Balance</td>
-                            <td>Rs. {{ number_format($supplier->opening_balance, 2) }}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold text-muted">Current Balance</td>
-                            <td class="fw-bold {{ $supplier->current_balance > 0 ? 'text-danger' : 'text-success' }}">
-                                Rs. {{ number_format($supplier->current_balance, 2) }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold text-muted">Status</td>
-                            <td>
-                                @if($supplier->is_active)
-                                    <span class="badge bg-success">Active</span>
-                                @else
-                                    <span class="badge bg-danger">Inactive</span>
-                                @endif
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold text-muted">Notes</td>
-                            <td>{{ $supplier->notes ?? 'N/A' }}</td>
-                        </tr>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Purchase No</th>
+                                <th>Date</th>
+                                <th>Invoice No</th>
+                                <th>Total</th>
+                                <th>Paid</th>
+                                <th>Due</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($supplier->purchases as $p)
+                            <tr>
+                                <td>
+                                    <a href="{{ route('admin.purchases.show', $p) }}" class="fw-bold text-decoration-none">
+                                        {{ $p->purchase_no }}
+                                    </a>
+                                </td>
+                                <td>{{ $p->purchase_date->format('d M Y') }}</td>
+                                <td>{{ $p->supplier_invoice_no ?: '-' }}</td>
+                                <td class="fw-bold">₹{{ number_format($p->grand_total, 2) }}</td>
+                                <td class="text-success">₹{{ number_format($p->paid_amount, 2) }}</td>
+                                <td class="{{ $p->due_amount > 0 ? 'text-danger fw-bold' : 'text-muted' }}">
+                                    ₹{{ number_format($p->due_amount, 2) }}
+                                </td>
+                                <td><span class="badge {{ $p->payment_badge_class }}">{{ ucfirst($p->payment_status) }}</span></td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-3">No purchases recorded from this supplier.</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
                     </table>
                 </div>
             </div>
+        </div>
 
-            @if($supplier->purchases->count() > 0)
-                <div class="mt-4">
-                    <h5 class="fw-bold">Recent Purchases</h5>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Invoice</th>
-                                    <th>Date</th>
-                                    <th>Total</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($supplier->purchases->take(5) as $purchase)
-                                    <tr>
-                                        <td>{{ $purchase->invoice_number }}</td>
-                                        <td>{{ $purchase->purchase_date->format('d M, Y') }}</td>
-                                        <td>Rs. {{ number_format($purchase->total_amount, 2) }}</td>
-                                        <td>
-                                            @if($purchase->payment_status == 'paid')
-                                                <span class="badge bg-success">Paid</span>
-                                            @elseif($purchase->payment_status == 'partial')
-                                                <span class="badge bg-warning">Partial</span>
-                                            @else
-                                                <span class="badge bg-danger">Pending</span>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+        <!-- Supplier Information & Payments -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white">
+                    <span class="fw-bold"><i class="bi bi-person-lines-fill me-1 text-secondary"></i>Contact Information</span>
                 </div>
-            @endif
+                <div class="card-body p-3">
+                    <div class="mb-2"><small class="text-muted d-block">Phone Number</small> <strong>{{ $supplier->mobile }}</strong></div>
+                    <div class="mb-2"><small class="text-muted d-block">Email</small> <strong>{{ $supplier->email ?: '-' }}</strong></div>
+                    <div class="mb-2"><small class="text-muted d-block">Address</small> <span>{{ $supplier->address ?: '-' }}</span></div>
+                    <div class="mb-0"><small class="text-muted d-block">GSTIN</small> <code>{{ $supplier->gst_number ?: '-' }}</code></div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <span class="fw-bold"><i class="bi bi-wallet2 me-1 text-success"></i>Payment History</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0" style="font-size: 0.82rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($supplier->payments as $pmt)
+                            <tr>
+                                <td>{{ $pmt->payment_date->format('d M Y') }}</td>
+                                <td class="fw-bold text-success">₹{{ number_format($pmt->amount, 2) }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ strtoupper($pmt->payment_method) }}</span></td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-2">No payments logged yet.</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
+
 </div>
 @endsection

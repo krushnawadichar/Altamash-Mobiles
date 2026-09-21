@@ -4,34 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Customer extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'name',
+        'mobile',
         'email',
-        'phone',
-        'alternative_phone',
         'address',
         'gst_number',
-        'pan_number',
         'opening_balance',
         'current_balance',
-        'total_purchases',
-        'total_purchase_amount',
         'notes',
-        'is_active',
-        'created_by'
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
         'opening_balance' => 'decimal:2',
         'current_balance' => 'decimal:2',
-        'total_purchase_amount' => 'decimal:2',
     ];
 
     public function sales()
@@ -39,18 +30,33 @@ class Customer extends Model
         return $this->hasMany(Sale::class);
     }
 
-    public function repairs()
+    public function saleReturns()
     {
-        return $this->hasMany(Repair::class);
+        return $this->hasMany(SaleReturn::class);
     }
 
-    public function creator()
+    public function repairJobs()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->hasMany(RepairJob::class);
     }
 
-    public function scopeActive($query)
+    public function payments()
     {
-        return $query->where('is_active', true);
+        return $this->hasMany(SalePayment::class);
+    }
+
+    public function getTotalPurchasesAttribute()
+    {
+        return $this->sales()->where('status', 'completed')->sum('grand_total');
+    }
+
+    public function getTotalPaidAttribute()
+    {
+        return $this->sales()->where('status', 'completed')->sum('paid_amount') + $this->payments()->whereNull('sale_id')->sum('amount');
+    }
+
+    public function getTotalDueAttribute()
+    {
+        return $this->sales()->where('status', 'completed')->sum('due_amount');
     }
 }

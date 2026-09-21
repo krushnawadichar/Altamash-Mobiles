@@ -95,7 +95,7 @@
                             <h3 class="stat-value">Rs. {{ number_format($stats['today_sales'] ?? 0, 0) }}</h3>
                         </div>
                         <div class="card-icon bg-white bg-opacity-20">
-                            <i class="fas fa-shopping-cart"></i>
+                            <i class="fas fa-shopping-cart text-dark"></i>
                         </div>
                     </div>
                 </div>
@@ -111,7 +111,7 @@
                             <h3 class="stat-value">Rs. {{ number_format($stats['today_profit'] ?? 0, 0) }}</h3>
                         </div>
                         <div class="card-icon bg-white bg-opacity-20">
-                            <i class="fas fa-chart-line"></i>
+                            <i class="fas fa-chart-line text-success"></i>
                         </div>
                     </div>
                 </div>
@@ -127,7 +127,7 @@
                             <h3 class="stat-value">Rs. {{ number_format($stats['today_purchases'] ?? 0, 0) }}</h3>
                         </div>
                         <div class="card-icon bg-white bg-opacity-20">
-                            <i class="fas fa-shopping-bag"></i>
+                            <i class="fas fa-shopping-bag text-info"></i>
                         </div>
                     </div>
                 </div>
@@ -143,7 +143,7 @@
                             <h3 class="stat-value">Rs. {{ number_format($stats['today_expenses'] ?? 0, 0) }}</h3>
                         </div>
                         <div class="card-icon bg-white bg-opacity-20">
-                            <i class="fas fa-money-bill-wave"></i>
+                            <i class="fas fa-money-bill-wave text-warning"></i>
                         </div>
                     </div>
                 </div>

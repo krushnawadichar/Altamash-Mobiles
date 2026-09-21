@@ -2,91 +2,77 @@
 
 namespace App\Services;
 
-use App\Models\Inventory;
-use App\Repositories\InventoryRepository;
+use App\Models\InventoryTransaction;
+use App\Models\Product;
+use App\Models\ProductSerial;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Exception;
 
 class InventoryService
 {
-    protected $inventoryRepository;
+    /**
+     * Record stock movement and update product stock
+     */
+    public function recordMovement(
+        Product $product,
+        string $transactionType,
+        int $quantityChange, // positive for stock IN, negative for stock OUT
+        ?int $referenceId = null,
+        ?string $referenceType = null,
+        ?ProductSerial $serial = null,
+        float $unitCost = 0.0,
+        ?string $notes = null
+    ): InventoryTransaction {
+        $beforeStock = $product->current_stock;
+        $afterStock = $beforeStock + $quantityChange;
 
-    public function __construct(InventoryRepository $inventoryRepository)
-    {
-        $this->inventoryRepository = $inventoryRepository;
+        if ($afterStock < 0 && $quantityChange < 0) {
+            throw new Exception("Insufficient stock for product: {$product->name}. Current: {$beforeStock}, Requested deduction: " . abs($quantityChange));
+        }
+
+        $product->current_stock = $afterStock;
+        $product->save();
+
+        return InventoryTransaction::create([
+            'product_id' => $product->id,
+            'product_serial_id' => $serial?->id,
+            'transaction_type' => $transactionType,
+            'reference_id' => $referenceId,
+            'reference_type' => $referenceType,
+            'quantity' => $quantityChange,
+            'before_stock' => $beforeStock,
+            'after_stock' => $afterStock,
+            'unit_cost' => $unitCost ?: $product->purchase_price,
+            'notes' => $notes,
+            'user_id' => Auth::id(),
+        ]);
     }
 
-    public function getAllInventory()
+    /**
+     * Mark mobile IMEI as Sold
+     */
+    public function markImeiSold(ProductSerial $serial, int $saleItemId, float $sellingPrice = 0): void
     {
-        return $this->inventoryRepository->all();
+        if ($serial->status === 'sold') {
+            throw new Exception("Mobile IMEI: {$serial->imei_1} is already sold and cannot be sold again.");
+        }
+
+        $serial->status = 'sold';
+        $serial->sale_item_id = $saleItemId;
+        $serial->selling_price = $sellingPrice ?: $serial->product->selling_price;
+        $serial->sold_at = now();
+        $serial->save();
     }
 
-    public function getInventoryByProduct($productId, $type = 'App\Models\Product')
+    /**
+     * Mark mobile IMEI as Available (e.g. on return or cancellation)
+     */
+    public function markImeiAvailable(ProductSerial $serial): void
     {
-        return $this->inventoryRepository->findByProduct($productId, $type);
-    }
-
-    public function getLowStockItems()
-    {
-        return $this->inventoryRepository->getLowStock();
-    }
-
-    public function createInventory(array $data)
-    {
-        $data['created_by'] = auth()->id();
-        return $this->inventoryRepository->create($data);
-    }
-
-    public function stockAdjustment(array $data)
-    {
-        return DB::transaction(function () use ($data) {
-            $inventory = $this->createInventory([
-                'inventoriable_id' => $data['item_id'],
-                'inventoriable_type' => $data['item_type'],
-                'type' => 'adjustment',
-                'quantity' => $data['quantity'],
-                'price' => $data['price'] ?? 0,
-                'total_price' => ($data['price'] ?? 0) * $data['quantity'],
-                'remarks' => $data['remarks'] ?? 'Stock adjustment',
-            ]);
-
-            // Update the actual product/accessory stock
-            if ($data['item_type'] === 'App\Models\Product') {
-                $productService = app(ProductService::class);
-                $productService->updateStock($data['item_id'], $data['quantity'], 
-                    $data['quantity'] >= 0 ? 'add' : 'subtract');
-            } else {
-                $accessoryService = app(AccessoryService::class);
-                $accessoryService->updateStock($data['item_id'], abs($data['quantity']), 
-                    $data['quantity'] >= 0 ? 'add' : 'subtract');
-            }
-
-            return $inventory;
-        });
-    }
-
-    public function stockTransfer(array $data)
-    {
-        // Implementation for stock transfer between products
-        return DB::transaction(function () use ($data) {
-            // Subtract from source
-            $this->stockAdjustment([
-                'item_id' => $data['source_id'],
-                'item_type' => $data['item_type'],
-                'quantity' => -$data['quantity'],
-                'price' => $data['price'] ?? 0,
-                'remarks' => 'Transfer to ' . ($data['destination_name'] ?? 'another location'),
-            ]);
-
-            // Add to destination
-            $this->stockAdjustment([
-                'item_id' => $data['destination_id'],
-                'item_type' => $data['item_type'],
-                'quantity' => $data['quantity'],
-                'price' => $data['price'] ?? 0,
-                'remarks' => 'Transfer from ' . ($data['source_name'] ?? 'another location'),
-            ]);
-
-            return true;
-        });
+        $serial->status = 'available';
+        $serial->sale_item_id = null;
+        $serial->sold_at = null;
+        $serial->save();
     }
 }

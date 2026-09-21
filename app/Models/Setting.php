@@ -4,36 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 
 class Setting extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
-    protected $fillable = [
-        'key',
-        'value',
-        'type',
-        'group',
-        'is_active'
-    ];
+    protected $fillable = ['key', 'value'];
 
-    protected $casts = [
-        'is_active' => 'boolean',
-    ];
-
-    public function scopeGeneral($query)
+    public static function get(string $key, mixed $default = null): mixed
     {
-        return $query->where('group', 'general');
+        return Cache::remember("setting_{$key}", 3600, function () use ($key, $default) {
+            $setting = self::where('key', $key)->first();
+            return $setting ? $setting->value : $default;
+        });
     }
 
-    public function scopeInvoice($query)
+    public static function set(string $key, mixed $value): void
     {
-        return $query->where('group', 'invoice');
-    }
-
-    public function scopeTax($query)
-    {
-        return $query->where('group', 'tax');
+        self::updateOrCreate(['key' => $key], ['value' => $value]);
+        Cache::forget("setting_{$key}");
     }
 }

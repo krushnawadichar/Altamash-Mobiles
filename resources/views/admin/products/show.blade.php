@@ -1,182 +1,157 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
-@section('title', $product->name . ' - Altamash Mobiles')
+@section('title', $product->name)
+@section('page_title', 'Product Details')
 
 @section('content')
-<div class="py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold">
-            <i class="fas fa-mobile-alt me-2 text-primary"></i> Product Details
-        </h2>
+<div class="container-fluid px-0">
+
+    <div class="d-flex align-items-center justify-content-between mb-3">
         <div>
-            <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-warning">
-                <i class="fas fa-edit me-1"></i> Edit
+            <h4 class="fw-bold mb-0">{{ $product->name }}</h4>
+            <span class="badge {{ $product->stock_badge_class }}">{{ $product->current_stock }} in stock ({{ $product->stock_status }})</span>
+            <span class="badge bg-light text-dark border ms-1">SKU: {{ $product->sku }}</span>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ route('admin.products.barcode', $product) }}" class="btn btn-outline-dark btn-sm">
+                <i class="bi bi-upc-scan me-1"></i> Barcode
             </a>
-            <a href="{{ route('admin.products.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Back
+            <a href="{{ route('admin.products.edit', $product) }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-pencil me-1"></i> Edit
+            </a>
+            <a href="{{ route('admin.products.index') }}" class="btn btn-light border btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back
             </a>
         </div>
     </div>
 
-    <div class="row g-3">
-        <!-- Product Image -->
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center">
+    <!-- Product Overview Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-3 text-center">
                     @if($product->image)
-                        <img src="{{ Storage::url($product->image) }}" 
-                             alt="{{ $product->name }}" 
-                             class="img-fluid rounded" style="max-height: 300px;">
+                        <img src="{{ asset('storage/' . $product->image) }}" class="img-fluid rounded mb-3 border p-1" style="max-height: 200px; object-fit: contain;">
                     @else
-                        <div class="bg-light rounded p-5">
-                            <i class="fas fa-mobile-alt fa-5x text-muted"></i>
-                            <p class="text-muted mt-2">No Image</p>
+                        <div class="rounded bg-light d-flex align-items-center justify-content-center text-muted border mx-auto mb-3" style="width: 140px; height: 140px;">
+                            <i class="bi bi-phone fs-1"></i>
                         </div>
                     @endif
-                </div>
-            </div>
+                    <h5 class="fw-bold mb-1">{{ $product->name }}</h5>
+                    <p class="text-muted small mb-3">{{ $product->brand?->name ?? 'Generic' }} &bull; {{ $product->category?->name ?? 'General' }}</p>
 
-            <!-- Barcode -->
-            <div class="card border-0 shadow-sm mt-3">
-                <div class="card-body text-center">
-                    <h6 class="fw-bold mb-2">Barcode</h6>
-                    <div class="bg-light p-3 rounded">
-                        {!! DNS1D::getBarcodeHTML($product->barcode, 'C128', 2, 60) !!}
-                        <p class="mt-2 mb-0 small">{{ $product->barcode }}</p>
+                    <div class="row g-2 border-top pt-3 text-start">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Purchase Price</small>
+                            <span class="fw-bold">₹{{ number_format($product->purchase_price, 2) }}</span>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Selling Price</small>
+                            <span class="fw-bold text-success">₹{{ number_format($product->selling_price, 2) }}</span>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <small class="text-muted d-block">Min Stock Limit</small>
+                            <span class="fw-bold">{{ $product->min_stock }} units</span>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <small class="text-muted d-block">Tax / GST</small>
+                            <span class="fw-bold">{{ $product->tax_percent }}%</span>
+                        </div>
                     </div>
-                    <a href="{{ route('admin.products.barcode', $product->id) }}" class="btn btn-sm btn-primary mt-2" target="_blank">
-                        <i class="fas fa-print me-1"></i> Print Barcode
-                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Product Information -->
-        <div class="col-md-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-0 py-3">
-                    <h4 class="fw-bold mb-0">{{ $product->name }}</h4>
-                    <span class="badge bg-info mt-1">{{ $product->sku }}</span>
+        <div class="col-lg-8">
+            <!-- If Mobile Phone: Show IMEIs Table -->
+            @if($product->isMobile())
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <span class="fw-bold"><i class="bi bi-upc-scan me-1 text-primary"></i>Tracked Mobile Units & IMEIs ({{ $product->serials->count() }})</span>
+                    <div>
+                        <span class="badge bg-success">{{ $product->availableSerials->count() }} Available</span>
+                        <span class="badge bg-secondary ms-1">{{ $product->soldSerials->count() }} Sold</span>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <table class="table table-borderless">
-                                <tr>
-                                    <td class="fw-bold text-muted">Category</td>
-                                    <td>{{ $product->category->name ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold text-muted">Brand</td>
-                                    <td>{{ $product->brand->name ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold text-muted">Supplier</td>
-                                    <td>{{ $product->supplier->name ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold text-muted">Unit</td>
-                                    <td>{{ $product->unit->name ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold text-muted">Product Type</td>
-                                    <td>{{ $product->productType->name ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold text-muted">Mobile Company</td>
-                                    <td>{{ $product->mobileCompany->name ?? 'N/A' }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <table class="table table-borderless">
-                                <tr>
-                                    <td class="fw-bold text-muted">Purchase Price</td>
-                                    <td class="fw-bold">Rs. {{ number_format($product->purchase_price, 2) }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold text-muted">Selling Price</td>
-                                    <td class="fw-bold text-success">Rs. {{ number_format($product->selling_price, 2) }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold text-muted">GST %</td>
-                                    <td>{{ $product->gst_percentage }}%</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold text-muted">Tax Amount</td>
-                                    <td>Rs. {{ number_format($product->tax_amount, 2) }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold text-muted">Color</td>
-                                    <td>{{ $product->color ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold text-muted">Storage</td>
-                                    <td>{{ $product->storage ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold text-muted">RAM</td>
-                                    <td>{{ $product->ram ?? 'N/A' }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>IMEI 1</th>
+                                <th>IMEI 2</th>
+                                <th>Serial No</th>
+                                <th>Specs / Color</th>
+                                <th>Status</th>
+                                <th>Sold At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($product->serials as $serial)
+                            <tr>
+                                <td class="fw-bold font-monospace">{{ $serial->imei_1 }}</td>
+                                <td class="font-monospace text-muted">{{ $serial->imei_2 ?: '-' }}</td>
+                                <td class="font-monospace text-muted">{{ $serial->serial_no ?: '-' }}</td>
+                                <td>{{ $serial->color }} {{ $serial->ram ? '| ' . $serial->ram : '' }} {{ $serial->storage ? '| ' . $serial->storage : '' }}</td>
+                                <td>
+                                    <span class="badge {{ $serial->status_badge_class }}">
+                                        {{ ucfirst($serial->status) }}
+                                    </span>
+                                </td>
+                                <td class="text-muted">{{ $serial->sold_at ? $serial->sold_at->format('d M Y, h:i A') : '-' }}</td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-3">No serial / IMEI records found. Register units via Purchase.</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
 
-                    <!-- Stock Information -->
-                    <div class="row mt-3">
-                        <div class="col-md-12">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-4 text-center">
-                                            <h6 class="text-muted">Current Stock</h6>
-                                            <h3 class="fw-bold {{ $product->current_stock <= 0 ? 'text-danger' : ($product->current_stock <= $product->minimum_stock ? 'text-warning' : 'text-success') }}">
-                                                {{ $product->current_stock }}
-                                            </h3>
-                                        </div>
-                                        <div class="col-md-4 text-center">
-                                            <h6 class="text-muted">Minimum Stock</h6>
-                                            <h3 class="fw-bold">{{ $product->minimum_stock }}</h3>
-                                        </div>
-                                        <div class="col-md-4 text-center">
-                                            <h6 class="text-muted">Status</h6>
-                                            <h3>
-                                                @if($product->current_stock <= 0)
-                                                    <span class="badge bg-danger">Out of Stock</span>
-                                                @elseif($product->current_stock <= $product->minimum_stock)
-                                                    <span class="badge bg-warning">Low Stock</span>
-                                                @else
-                                                    <span class="badge bg-success">In Stock</span>
-                                                @endif
-                                            </h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Description -->
-                    @if($product->description)
-                        <div class="mt-3">
-                            <h6 class="fw-bold text-muted">Description</h6>
-                            <p class="mb-0">{{ $product->description }}</p>
-                        </div>
-                    @endif
-
-                    <!-- Meta Information -->
-                    <div class="mt-3">
-                        <small class="text-muted">
-                            Created: {{ $product->created_at->format('d M, Y H:i') }} | 
-                            Updated: {{ $product->updated_at->format('d M, Y H:i') }}
-                            @if($product->creator)
-                                | By: {{ $product->creator->name }}
-                            @endif
-                        </small>
-                    </div>
+            <!-- Stock Movement History -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <span class="fw-bold"><i class="bi bi-clock-history me-1 text-primary"></i>Stock Movement Ledger</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Type</th>
+                                <th>Quantity</th>
+                                <th>Stock Before &rarr; After</th>
+                                <th>Notes / Ref</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($product->inventoryTransactions->take(15) as $tx)
+                            <tr>
+                                <td class="text-muted">{{ $tx->created_at->format('d M Y, h:i A') }}</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">{{ $tx->transaction_type }}</span>
+                                </td>
+                                <td>
+                                    <span class="fw-bold {{ $tx->quantity > 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ $tx->quantity > 0 ? '+' . $tx->quantity : $tx->quantity }}
+                                    </span>
+                                </td>
+                                <td>{{ $tx->before_stock }} &rarr; <strong>{{ $tx->after_stock }}</strong></td>
+                                <td class="text-muted">{{ $tx->notes ?: '-' }}</td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">No stock transactions recorded yet.</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
+
 </div>
 @endsection

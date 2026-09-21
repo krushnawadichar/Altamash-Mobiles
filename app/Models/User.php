@@ -3,23 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, Notifiable;
 
     protected $fillable = [
         'name',
+        'username',
         'email',
-        'password',
         'phone',
-        'address',
+        'role',
         'avatar',
-        'is_active',
-        'role_id'
+        'status',
+        'password',
     ];
 
     protected $hidden = [
@@ -32,62 +31,59 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'is_active' => 'boolean',
         ];
     }
 
-    public function role()
+    public function roles()
     {
-        return $this->belongsTo(Role::class);
+        return $this->belongsToMany(Role::class);
     }
 
-    public function hasPermission($permission)
+    public function hasRole(string|array $roles): bool
     {
-        return $this->role->permissions->contains('name', $permission);
+        if (is_string($roles)) {
+            $roles = [$roles];
+        }
+
+        if (in_array($this->role, $roles)) {
+            return true;
+        }
+
+        return $this->roles()->whereIn('slug', $roles)->exists();
     }
 
-    public function createdCategories()
+    public function hasPermission(string $permissionSlug): bool
     {
-        return $this->hasMany(Category::class, 'created_by');
+        if ($this->role === 'super_admin') {
+            return true;
+        }
+
+        foreach ($this->roles as $role) {
+            if ($role->permissions()->where('slug', $permissionSlug)->exists()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    public function createdBrands()
+    public function isSuperAdmin(): bool
     {
-        return $this->hasMany(Brand::class, 'created_by');
+        return $this->role === 'super_admin';
     }
 
-    public function createdSuppliers()
+    public function isAdmin(): bool
     {
-        return $this->hasMany(Supplier::class, 'created_by');
+        return in_array($this->role, ['super_admin', 'admin']);
     }
 
-    public function createdCustomers()
+    public function isSalesman(): bool
     {
-        return $this->hasMany(Customer::class, 'created_by');
+        return $this->role === 'salesman';
     }
 
-    public function createdProducts()
+    public function isTechnician(): bool
     {
-        return $this->hasMany(Product::class, 'created_by');
-    }
-
-    public function createdPurchases()
-    {
-        return $this->hasMany(Purchase::class, 'created_by');
-    }
-
-    public function createdSales()
-    {
-        return $this->hasMany(Sale::class, 'created_by');
-    }
-
-    public function createdRepairs()
-    {
-        return $this->hasMany(Repair::class, 'created_by');
-    }
-
-    public function createdExpenses()
-    {
-        return $this->hasMany(Expense::class, 'created_by');
+        return $this->role === 'technician';
     }
 }
