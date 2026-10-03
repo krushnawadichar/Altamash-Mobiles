@@ -37,7 +37,7 @@ class FrontendController extends Controller
             $query->latest();
         }
 
-        $products = $query->get();
+        $products = $query->paginate(12)->withQueryString();
         $categories = Category::where('status', 1)->get();
         return view('frontend.shop', compact('products', 'categories'));
     }
@@ -53,6 +53,11 @@ class FrontendController extends Controller
                                   ->get();
                                   
         return view('frontend.product', compact('product', 'relatedProducts'));
+    }
+
+    public function about()
+    {
+        return view('frontend.about');
     }
 
     public function contact()

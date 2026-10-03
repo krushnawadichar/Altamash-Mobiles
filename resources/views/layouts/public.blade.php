@@ -12,8 +12,9 @@
     
     <style>
         :root {
-            --primary: #1e3a8a; /* Deep blue */
-            --secondary: #fbbf24; /* Amber */
+            --primary: #0f172a; /* Slate 900 - Premium dark */
+            --secondary: #3b82f6; /* Blue 500 - Tech accent */
+            --accent: #f59e0b; /* Amber - Highlights */
         }
         body {
             font-family: 'Inter', sans-serif;
@@ -21,8 +22,10 @@
             color: #1f2937;
         }
         .navbar-custom {
-            background-color: #ffffff;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
         }
         .navbar-brand {
             font-weight: 800;
@@ -30,12 +33,28 @@
             font-size: 1.5rem;
         }
         .nav-link {
-            font-weight: 500;
-            color: #4b5563 !important;
-            transition: color 0.2s;
+            font-weight: 600;
+            color: #475569 !important;
+            transition: color 0.3s ease;
+            padding: 0.5rem 1rem !important;
+            position: relative;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 50%;
+            background-color: var(--secondary);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+        .nav-link:hover::after, .nav-link.active::after {
+            width: 80%;
         }
         .nav-link:hover, .nav-link.active {
-            color: var(--primary) !important;
+            color: var(--secondary) !important;
         }
         .btn-primary-custom {
             background-color: var(--primary);
@@ -56,9 +75,17 @@
             background-color: #f59e0b;
         }
         .footer {
-            background-color: #111827;
-            color: #9ca3af;
-            padding: 3rem 0;
+            background-color: #020617; /* Ultra dark slate */
+            color: #94a3b8;
+            padding: 5rem 0 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .footer::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
         }
         .footer h5 {
             color: white;
@@ -100,6 +127,7 @@
                 <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">Home</a></li>
                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('shop') ? 'active' : '' }}" href="{{ route('shop') }}">Shop</a></li>
+                    <li class="nav-item"><a class="nav-link {{ request()->routeIs('about') ? 'active' : '' }}" href="{{ route('about') }}">About Us</a></li>
                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('contact') ? 'active' : '' }}" href="{{ route('contact') }}">Contact Us</a></li>
                 </ul>
                 <div class="d-flex align-items-center gap-3">
@@ -136,14 +164,14 @@
                     <h5 class="d-flex align-items-center mb-3">
                         <img src="{{ asset('build/assets/logos/altmash-logo.jpeg') }}" alt="ALTAMASH MOBILE Logo" style="height: 65px; object-fit: contain;" class="me-2">
                     </h5>
-                    <p>Your trusted destination for premium electronics, home appliances, and gadgets. Quality service since 2026.</p>
+                    <p class="mt-3 pe-md-4">Your ultimate destination for premium electronics, mobile devices, and expert repair services. Quality guaranteed since 2026.</p>
                     <div class="d-flex gap-3 mt-4">
-                        <a href="#" class="text-white fs-4"><i class="fa-brands fa-facebook"></i></a>
-                        <a href="#" class="text-white fs-4"><i class="fa-brands fa-instagram"></i></a>
-                        <a href="#" class="text-white fs-4"><i class="fa-brands fa-twitter"></i></a>
+                        <a href="#" class="text-white fs-5 bg-white bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center hover-scale" style="width: 40px; height: 40px;"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="#" class="text-white fs-5 bg-white bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center hover-scale" style="width: 40px; height: 40px;"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="#" class="text-white fs-5 bg-white bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center hover-scale" style="width: 40px; height: 40px;"><i class="fa-brands fa-twitter"></i></a>
                     </div>
                 </div>
-                <div class="col-lg-2 col-md-6">
+                <div class="col-lg-2 col-md-6 ">
                     <h5>Quick Links</h5>
                     <ul class="list-unstyled d-flex flex-column gap-2">
                         <li><a href="{{ route('home') }}">Home</a></li>

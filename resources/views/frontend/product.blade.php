@@ -30,10 +30,7 @@
                         @endforeach
                     </div>
                 @else
-                    <div class="text-center text-muted py-5">
-                        <i class="fa-solid fa-image fs-1 mb-3"></i>
-                        <p>No image available</p>
-                    </div>
+                    <img id="mainImage" src="https://placehold.co/600x600/f8f9fa/a3a3a3?text=No+Image" class="img-fluid mb-4 rounded shadow-sm" alt="No Image Available" style="max-height: 400px; object-fit: contain;">
                 @endif
             </div>
 
@@ -99,9 +96,7 @@
                         @php $mainImage = $related->images->first()->image; @endphp
                         <img src="{{ str_starts_with($mainImage, 'http') ? $mainImage : asset('storage/' . $mainImage) }}" class="card-img-top p-3" alt="{{ $related->name }}" style="height: 180px; object-fit: contain;">
                     @else
-                        <div class="bg-light d-flex align-items-center justify-content-center p-3" style="height: 180px;">
-                            <i class="fa-solid fa-image text-muted fs-2"></i>
-                        </div>
+                        <img src="https://placehold.co/600x600/f8f9fa/a3a3a3?text=No+Image" class="card-img-top p-3" alt="No Image Available" style="height: 180px; object-fit: contain;">
                     @endif
                     
                     <div class="card-body d-flex flex-column">

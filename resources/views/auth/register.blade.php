@@ -117,7 +117,7 @@
                                         <label for="name" class="form-label fw-semibold text-dark">Full Name</label>
                                         <div class="input-group">
                                             <span class="input-group-text border-end-0"><i class="fa-solid fa-user"></i></span>
-                                            <input id="name" type="text" class="form-control border-start-0 ps-0 @error('name') is-invalid @enderror" name="name" value="{{ old('name') }}" required autofocus autocomplete="name" placeholder="John Doe">
+                                            <input id="name" type="text" class="form-control border-start-0 ps-0 @error('name') is-invalid @enderror" name="name" value="{{ old('name') }}" required autofocus autocomplete="name" placeholder="Enter Full Name">
                                         </div>
                                         @error('name')
                                             <div class="text-danger mt-1 small fw-medium"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ $message }}</div>
@@ -129,7 +129,7 @@
                                         <label for="email" class="form-label fw-semibold text-dark">Email Address</label>
                                         <div class="input-group">
                                             <span class="input-group-text border-end-0"><i class="fa-solid fa-envelope"></i></span>
-                                            <input id="email" type="email" class="form-control border-start-0 ps-0 @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required autocomplete="username" placeholder="name@example.com">
+                                            <input id="email" type="email" class="form-control border-start-0 ps-0 @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required autocomplete="username" placeholder="Enter Email Address">
                                         </div>
                                         @error('email')
                                             <div class="text-danger mt-1 small fw-medium"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ $message }}</div>
@@ -141,7 +141,7 @@
                                         <label for="password" class="form-label fw-semibold text-dark mb-0">Password</label>
                                         <div class="input-group mt-1">
                                             <span class="input-group-text border-end-0"><i class="fa-solid fa-lock"></i></span>
-                                            <input id="password" type="password" class="form-control border-start-0 ps-0 @error('password') is-invalid @enderror" name="password" required autocomplete="new-password" placeholder="••••••••">
+                                            <input id="password" type="password" class="form-control border-start-0 ps-0 @error('password') is-invalid @enderror" name="password" required autocomplete="new-password" placeholder="Enter Password">
                                         </div>
                                         @error('password')
                                             <div class="text-danger mt-1 small fw-medium"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ $message }}</div>
@@ -153,7 +153,7 @@
                                         <label for="password_confirmation" class="form-label fw-semibold text-dark mb-0">Confirm Password</label>
                                         <div class="input-group mt-1">
                                             <span class="input-group-text border-end-0"><i class="fa-solid fa-lock"></i></span>
-                                            <input id="password_confirmation" type="password" class="form-control border-start-0 ps-0 @error('password_confirmation') is-invalid @enderror" name="password_confirmation" required autocomplete="new-password" placeholder="••••••••">
+                                            <input id="password_confirmation" type="password" class="form-control border-start-0 ps-0 @error('password_confirmation') is-invalid @enderror" name="password_confirmation" required autocomplete="new-password" placeholder="Confirm Password">
                                         </div>
                                         @error('password_confirmation')
                                             <div class="text-danger mt-1 small fw-medium"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ $message }}</div>
