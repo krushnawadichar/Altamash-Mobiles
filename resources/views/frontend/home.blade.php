@@ -20,12 +20,12 @@
             <div class="carousel-caption d-flex align-items-center justify-content-center justify-content-lg-start text-center text-lg-start h-100 px-lg-5">
                 <div class="animate-fade-right container">
                     <div class="max-w-lg mx-auto mx-lg-0">
-                        <span class="badge bg-white text-dark px-4 py-2 fs-6 rounded-pill mb-4 shadow-sm text-uppercase tracking-wider fw-bold">LATEST & ORIGINAL</span>
-                        <h1 class="display-2 fw-bolder text-white mb-4 lh-1">Upgrade to the Latest <br class="d-none d-md-block"><span style="color: #f59e0b;">Smartphones</span></h1>
-                        <p class="lead text-white-50 mb-5 fs-4 fw-light d-none d-md-block">Explore the latest smartphones from top brands at competitive prices, with trusted service you can count on.</p>
-                        <div class="d-flex gap-3 justify-content-center justify-content-lg-start">
-                            <a href="{{ route('shop') }}" class="btn btn-warning btn-lg px-5 py-3 rounded-pill fw-bold shadow-lg hover-scale text-dark">Shop New Mobiles</a>
-                            <a href="#categories" class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill fw-bold hover-scale d-none d-sm-block">Explore Brands</a>
+                        <span class="badge bg-white text-dark px-3 py-2 fs-6 rounded-pill mb-2 mb-md-3 shadow-sm text-uppercase tracking-wider fw-bold">LATEST & ORIGINAL</span>
+                        <h1 class="hero-title fw-bolder text-white mb-2 mb-md-3 lh-1">Upgrade to the Latest <br class="d-none d-md-block"><span style="color: #f59e0b;">Smartphones</span></h1>
+                        <p class="lead text-white-50 mb-3 mb-md-4 fs-5 fw-light d-none d-md-block">Explore the latest smartphones from top brands at competitive prices, with trusted service you can count on.</p>
+                        <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start mt-2 mt-md-4">
+                            <a href="{{ route('shop') }}" class="btn btn-warning btn-lg rounded-pill fw-bold shadow-lg hover-scale text-dark px-4 py-3 w-100 w-sm-auto">Shop New Mobiles</a>
+                            <a href="#categories" class="btn btn-outline-light btn-lg rounded-pill fw-bold hover-scale px-4 py-3 w-100 w-sm-auto">Explore Brands</a>
                         </div>
                     </div>
                 </div>
@@ -42,12 +42,12 @@
             <div class="carousel-caption d-flex align-items-center justify-content-center justify-content-lg-end text-center text-lg-end h-100 px-lg-5">
                 <div class="animate-fade-left container d-flex justify-content-center justify-content-lg-end">
                     <div class="max-w-lg">
-                        <span class="badge bg-white text-dark px-4 py-2 fs-6 rounded-pill mb-4 shadow-sm text-uppercase tracking-wider fw-bold">CERTIFIED PRE-OWNED</span>
-                        <h1 class="display-2 fw-bolder text-white mb-4 lh-1">Premium Phones. <br class="d-none d-md-block"><span style="color: #f59e0b;">Smarter Prices.</span></h1>
-                        <p class="lead text-white-50 mb-5 fs-4 fw-light d-none d-md-block">Quality pre-owned smartphones, thoroughly checked and ready to deliver great performance without the premium price.</p>
-                        <div class="d-flex gap-3 justify-content-center justify-content-lg-end">
-                            <a href="{{ route('shop') }}" class="btn btn-light btn-lg px-5 py-3 rounded-pill fw-bold shadow-lg hover-scale text-dark">View Used Mobiles</a>
-                            <a href="{{ route('shop') }}" class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill fw-bold hover-scale d-none d-sm-block">Check Stock</a>
+                        <span class="badge bg-white text-dark px-3 py-2 fs-6 rounded-pill mb-2 mb-md-3 shadow-sm text-uppercase tracking-wider fw-bold">CERTIFIED PRE-OWNED</span>
+                        <h1 class="hero-title fw-bolder text-white mb-2 mb-md-3 lh-1">Premium Phones. <br class="d-none d-md-block"><span style="color: #f59e0b;">Smarter Prices.</span></h1>
+                        <p class="lead text-white-50 mb-3 mb-md-4 fs-5 fw-light d-none d-md-block">Quality pre-owned smartphones, thoroughly checked and ready to deliver great performance without the premium price.</p>
+                        <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-end mt-2 mt-md-4">
+                            <a href="{{ route('shop') }}" class="btn btn-light btn-lg rounded-pill fw-bold shadow-lg hover-scale text-dark px-4 py-3 w-100 w-sm-auto">View Used Mobiles</a>
+                            <a href="{{ route('shop') }}" class="btn btn-outline-light btn-lg rounded-pill fw-bold hover-scale px-4 py-3 w-100 w-sm-auto">Check Stock</a>
                         </div>
                     </div>
                 </div>
@@ -64,12 +64,12 @@
             <div class="carousel-caption d-flex align-items-center justify-content-center text-center h-100 px-lg-5">
                 <div class="animate-fade-up container">
                     <div class="mx-auto" style="max-width: 800px;">
-                        <span class="badge bg-warning text-dark px-4 py-2 fs-6 rounded-pill mb-4 shadow-sm text-uppercase tracking-wider fw-bold">EXPERT MOBILE SERVICE</span>
-                        <h1 class="display-2 fw-bolder text-white mb-4 lh-1">Your Phone, <br class="d-none d-md-block"><span style="color: #f59e0b;">Our Expertise.</span></h1>
-                        <p class="lead text-white-50 mb-5 fs-4 fw-light d-none d-md-block">From screen damage to battery issues, get reliable mobile repairs backed by experienced technicians and quality parts.</p>
-                        <div class="d-flex gap-3 justify-content-center">
-                            <a href="{{ route('contact') }}" class="btn btn-warning btn-lg px-5 py-3 rounded-pill fw-bold shadow-lg hover-scale text-dark">Book a Repair</a>
-                            <a href="{{ route('shop') }}" class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill fw-bold hover-scale d-none d-sm-block">Shop Accessories</a>
+                        <span class="badge bg-warning text-dark px-3 py-2 fs-6 rounded-pill mb-2 mb-md-3 shadow-sm text-uppercase tracking-wider fw-bold">EXPERT MOBILE SERVICE</span>
+                        <h1 class="hero-title fw-bolder text-white mb-2 mb-md-3 lh-1">Your Phone, <br class="d-none d-md-block"><span style="color: #f59e0b;">Our Expertise.</span></h1>
+                        <p class="lead text-white-50 mb-3 mb-md-4 fs-5 fw-light d-none d-md-block">From screen damage to battery issues, get reliable mobile repairs backed by experienced technicians and quality parts.</p>
+                        <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center mt-2 mt-md-4">
+                            <a href="{{ route('contact') }}" class="btn btn-warning btn-lg rounded-pill fw-bold shadow-lg hover-scale text-dark px-4 py-3 w-100 w-sm-auto">Book a Repair</a>
+                            <a href="{{ route('shop') }}" class="btn btn-outline-light btn-lg rounded-pill fw-bold hover-scale px-4 py-3 w-100 w-sm-auto">Shop Accessories</a>
                         </div>
                     </div>
                 </div>
@@ -432,6 +432,38 @@
     .review-card:hover { 
         transform: translateY(-5px);
         box-shadow: 0 1rem 3rem rgba(0,0,0,.08)!important;
+    }
+    
+    /* Responsive Typography & Layout */
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    @media (min-width: 768px) {
+        .hero-title {
+            font-size: 4rem;
+        }
+    }
+    @media (min-width: 576px) {
+        .w-sm-auto {
+            width: auto !important;
+        }
+    }
+    @media (max-width: 767.98px) {
+        .carousel-caption {
+            padding: 1.5rem !important;
+        }
+        .carousel-img-wrapper {
+            height: 70vh;
+            min-height: 480px;
+        }
+        .hero-title {
+            font-size: 2.2rem;
+        }
+        .btn-lg {
+            padding-top: 0.75rem !important;
+            padding-bottom: 0.75rem !important;
+            font-size: 1.1rem;
+        }
     }
 </style>
 @endpush

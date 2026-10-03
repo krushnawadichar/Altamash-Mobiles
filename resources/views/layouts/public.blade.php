@@ -35,26 +35,53 @@
         .nav-link {
             font-weight: 600;
             color: #475569 !important;
-            transition: color 0.3s ease;
+            transition: all 0.3s ease;
             padding: 0.5rem 1rem !important;
             position: relative;
         }
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 2px;
-            bottom: 0;
-            left: 50%;
-            background-color: var(--secondary);
-            transition: all 0.3s ease;
-            transform: translateX(-50%);
-        }
-        .nav-link:hover::after, .nav-link.active::after {
-            width: 80%;
+        @media (min-width: 992px) {
+            .nav-link::after {
+                content: '';
+                position: absolute;
+                width: 0;
+                height: 2px;
+                bottom: 0;
+                left: 50%;
+                background-color: var(--secondary);
+                transition: all 0.3s ease;
+                transform: translateX(-50%);
+            }
+            .nav-link:hover::after, .nav-link.active::after {
+                width: 80%;
+            }
         }
         .nav-link:hover, .nav-link.active {
             color: var(--secondary) !important;
+        }
+        @media (max-width: 991.98px) {
+            .navbar-collapse {
+                background-color: white;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                padding: 1.5rem;
+                box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+                border-bottom-left-radius: 1rem;
+                border-bottom-right-radius: 1rem;
+            }
+            .nav-link {
+                padding: 0.75rem 1rem !important;
+                border-radius: 0.5rem;
+                margin-bottom: 0.25rem;
+            }
+            .nav-link:hover, .nav-link.active {
+                background-color: #f8fafc;
+                padding-left: 1.5rem !important;
+            }
+            .navbar-custom {
+                position: relative;
+            }
         }
         .btn-primary-custom {
             background-color: var(--primary);
@@ -124,13 +151,13 @@
                 <i class="fa-solid fa-bars fs-4"></i>
             </button>
             <div class="collapse navbar-collapse" id="mainNav">
-                <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
+                <ul class="navbar-nav mx-auto mb-3 mb-lg-0 text-center text-lg-start">
                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">Home</a></li>
                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('shop') ? 'active' : '' }}" href="{{ route('shop') }}">Shop</a></li>
                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('about') ? 'active' : '' }}" href="{{ route('about') }}">About Us</a></li>
                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('contact') ? 'active' : '' }}" href="{{ route('contact') }}">Contact Us</a></li>
                 </ul>
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex flex-wrap justify-content-center align-items-center gap-3">
                     <a href="{{ route('cart.index') }}" class="text-dark fs-5 position-relative">
                         <i class="fa-solid fa-cart-shopping"></i>
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
