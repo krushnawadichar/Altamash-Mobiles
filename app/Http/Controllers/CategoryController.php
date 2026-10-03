@@ -2,66 +2,83 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ActivityLog;
-use App\Models\Category;
 use Illuminate\Http\Request;
+
+use App\Models\Category;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::withCount('products')->latest()->paginate(15);
+        $categories = Category::with('parent')->latest()->get();
         return view('admin.categories.index', compact('categories'));
+    }
+
+    public function create()
+    {
+        $mainCategories = Category::whereNull('parent_id')->get();
+        return view('admin.categories.create', compact('mainCategories'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name',
-            'description' => 'nullable|string',
-            'status' => 'required|in:active,inactive',
+            'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|unique:categories,slug|max:255',
+            'parent_id' => 'nullable|exists:categories,id',
+            'image' => 'nullable|image|max:2048',
         ]);
 
-        $category = Category::create([
-            'name' => $request->name,
-            'slug' => Str::slug($request->name),
-            'description' => $request->description,
-            'status' => $request->status,
-        ]);
+        $data = $request->all();
+        $data['slug'] = $request->slug ? Str::slug($request->slug) : Str::slug($request->name);
+        $data['status'] = $request->has('status');
 
-        ActivityLog::log('CATEGORY_CREATED', 'categories', $category->id, "Created category: {$category->name}");
-        return back()->with('success', 'Category created successfully.');
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->store('categories', 'public');
+        }
+
+        Category::create($data);
+
+        return redirect()->route('admin.categories.index')->with('success', 'Category created successfully.');
+    }
+
+    public function edit(Category $category)
+    {
+        $mainCategories = Category::whereNull('parent_id')->where('id', '!=', $category->id)->get();
+        return view('admin.categories.edit', compact('category', 'mainCategories'));
     }
 
     public function update(Request $request, Category $category)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
-            'description' => 'nullable|string',
-            'status' => 'required|in:active,inactive',
+            'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|unique:categories,slug,'.$category->id.'|max:255',
+            'parent_id' => 'nullable|exists:categories,id',
+            'image' => 'nullable|image|max:2048',
         ]);
 
-        $category->update([
-            'name' => $request->name,
-            'slug' => Str::slug($request->name),
-            'description' => $request->description,
-            'status' => $request->status,
-        ]);
+        $data = $request->all();
+        $data['slug'] = $request->slug ? Str::slug($request->slug) : Str::slug($request->name);
+        $data['status'] = $request->has('status');
 
-        ActivityLog::log('CATEGORY_UPDATED', 'categories', $category->id, "Updated category: {$category->name}");
-        return back()->with('success', 'Category updated successfully.');
+        if ($request->hasFile('image')) {
+            if ($category->image) Storage::disk('public')->delete($category->image);
+            $data['image'] = $request->file('image')->store('categories', 'public');
+        }
+
+        $category->update($data);
+
+        return redirect()->route('admin.categories.index')->with('success', 'Category updated successfully.');
     }
 
     public function destroy(Category $category)
     {
-        if ($category->products()->exists()) {
-            return back()->with('error', 'Cannot delete category containing products.');
+        if ($category->image) {
+            Storage::disk('public')->delete($category->image);
         }
-
-        $name = $category->name;
         $category->delete();
-        ActivityLog::log('CATEGORY_DELETED', 'categories', null, "Deleted category: {$name}");
-        return back()->with('success', 'Category deleted successfully.');
+        return redirect()->route('admin.categories.index')->with('success', 'Category deleted successfully.');
     }
 }

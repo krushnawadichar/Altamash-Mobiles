@@ -1,253 +1,154 @@
 @extends('layouts.admin')
 
-@section('title', 'Sale ' . $sale->invoice_no)
-@section('page_title', 'Sale Invoice Details')
-
 @section('content')
-<div class="container-fluid px-0">
-
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <div>
-            <h4 class="fw-bold mb-0">Invoice: {{ $sale->invoice_no }}</h4>
-            <span class="badge {{ $sale->status_badge_class }}">{{ ucfirst($sale->status) }}</span>
-            <span class="badge {{ $sale->payment_badge_class }} ms-1">{{ ucfirst($sale->payment_status) }}</span>
-            <small class="text-muted ms-2">{{ $sale->sale_date->format('d M Y') }}</small>
-        </div>
-        <div class="d-flex flex-wrap gap-2">
-            @if($sale->due_amount > 0 && $sale->status !== 'cancelled')
-                <button class="btn btn-success btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#collectPaymentModal">
-                    <i class="bi bi-cash-stack me-1"></i> Collect Due Balance
-                </button>
-            @endif
-            <a href="{{ route('admin.pos.invoice', $sale) }}" class="btn btn-primary btn-sm fw-bold">
-                <i class="bi bi-printer me-1"></i> Print Invoice
-            </a>
-            <a href="{{ route('admin.pos.pdf', $sale) }}" class="btn btn-outline-danger btn-sm">
-                <i class="bi bi-file-earmark-pdf me-1"></i> PDF
-            </a>
-            @if($sale->status !== 'cancelled')
-                <form action="{{ route('admin.sales.cancel', $sale) }}" method="POST" class="d-inline" onsubmit="return confirm('Cancel this sale? Stock and IMEIs will automatically be restored.');">
-                    @csrf
-                    <button type="submit" class="btn btn-outline-danger btn-sm">
-                        <i class="bi bi-x-circle me-1"></i> Cancel Sale
-                    </button>
-                </form>
-            @endif
-            <a href="{{ route('admin.sales.index') }}" class="btn btn-light border btn-sm">
-                <i class="bi bi-arrow-left me-1"></i> Back
-            </a>
-        </div>
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="fw-bold">Invoice: {{ $sale->invoice_number }}</h2>
+        <a href="{{ route('admin.sales.index') }}" class="text-decoration-none"><i class="fa-solid fa-arrow-left me-1"></i> Back to Sales</a>
     </div>
-
-    <div class="row g-3">
-        <!-- Items Details -->
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-header bg-white">
-                    <span class="fw-bold"><i class="bi bi-box-seam me-1 text-primary"></i>Sold Items ({{ $sale->items->count() }})</span>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Product Details</th>
-                                <th>Rate</th>
-                                <th>Quantity</th>
-                                <th>Warranty</th>
-                                <th class="text-end">Line Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($sale->items as $item)
-                            <tr>
-                                <td>
-                                    <div class="fw-bold text-dark">{{ $item->product->name }}</div>
-                                    <div class="text-muted small">
-                                        SKU: <code>{{ $item->product->sku }}</code>
-                                        @if($item->imei)
-                                            &bull; <strong class="text-primary font-monospace">IMEI: {{ $item->imei }}</strong>
-                                        @endif
-                                    </div>
-                                </td>
-                                <td>₹{{ number_format($item->unit_price, 2) }}</td>
-                                <td><span class="badge bg-primary-subtle text-primary">{{ $item->quantity }}</span></td>
-                                <td>{{ $item->warranty_months > 0 ? $item->warranty_months . ' Months' : 'No Warranty' }}</td>
-                                <td class="text-end fw-bold">₹{{ number_format($item->subtotal, 2) }}</td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Payment Records -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white">
-                    <span class="fw-bold"><i class="bi bi-wallet2 me-1 text-success"></i>Payment History ({{ $sale->payments->count() }})</span>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0" style="font-size: 0.85rem;">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Date</th>
-                                <th>Amount</th>
-                                <th>Method</th>
-                                <th>Transaction Ref</th>
-                                <th>Collected By</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($sale->payments as $pmt)
-                            <tr>
-                                <td>{{ $pmt->payment_date->format('d M Y') }}</td>
-                                <td class="fw-bold text-success">₹{{ number_format($pmt->amount, 2) }}</td>
-                                <td><span class="badge bg-light text-dark border text-uppercase">{{ $pmt->payment_method }}</span></td>
-                                <td>{{ $pmt->transaction_ref ?: '-' }}</td>
-                                <td><small class="text-muted">{{ $pmt->creator?->name ?? 'System' }}</small></td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="5" class="text-center text-muted py-2">No payments logged yet.</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Col: Financial Summary & Customer -->
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-header bg-white">
-                    <span class="fw-bold"><i class="bi bi-receipt me-1 text-secondary"></i>Financial Summary</span>
-                </div>
-                <div class="card-body p-3">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Subtotal:</span>
-                        <span class="fw-semibold">₹{{ number_format($sale->subtotal, 2) }}</span>
-                    </div>
-                    @if($sale->discount_amount > 0)
-                    <div class="d-flex justify-content-between mb-2 text-danger">
-                        <span>Discount:</span>
-                        <span class="fw-semibold">- ₹{{ number_format($sale->discount_amount, 2) }}</span>
-                    </div>
-                    @endif
-                    @if($sale->tax_amount > 0)
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">GST / Tax:</span>
-                        <span class="fw-semibold">₹{{ number_format($sale->tax_amount, 2) }}</span>
-                    </div>
-                    @endif
-                    <hr class="my-2">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="fw-bold fs-5">Grand Total:</span>
-                        <span class="fw-bold fs-5 text-primary">₹{{ number_format($sale->grand_total, 2) }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2 text-success">
-                        <span>Paid Amount:</span>
-                        <span class="fw-bold">₹{{ number_format($sale->paid_amount, 2) }}</span>
-                    </div>
-                    @if($sale->due_amount > 0)
-                    <div class="d-flex justify-content-between mb-2 text-danger">
-                        <span class="fw-bold">Balance Due:</span>
-                        <span class="fw-bold fs-6">₹{{ number_format($sale->due_amount, 2) }}</span>
-                    </div>
-                    @endif
-                    @if($sale->change_amount > 0)
-                    <div class="d-flex justify-content-between mb-2 text-secondary">
-                        <span>Change Returned:</span>
-                        <span>₹{{ number_format($sale->change_amount, 2) }}</span>
-                    </div>
-                    @endif
-
-                    @if(auth()->user()->isAdmin())
-                    <div class="pt-2 border-top mt-2">
-                        <div class="d-flex justify-content-between text-muted small">
-                            <span>Estimated Profit on Sale:</span>
-                            <strong class="text-success">₹{{ number_format($sale->profit, 2) }}</strong>
-                        </div>
-                    </div>
-                    @endif
-                </div>
-            </div>
-
-            <!-- Customer Card -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white">
-                    <span class="fw-bold"><i class="bi bi-person me-1 text-secondary"></i>Customer Information</span>
-                </div>
-                <div class="card-body p-3">
-                    <h6 class="fw-bold mb-1">{{ $sale->customer_name ?: 'Walk-in Customer' }}</h6>
-                    @if($sale->customer_mobile)
-                        <div class="small mb-1"><i class="bi bi-telephone me-1 text-muted"></i>+91 {{ $sale->customer_mobile }}</div>
-                    @endif
-                    @if($sale->customer?->address)
-                        <div class="small mb-2"><i class="bi bi-geo-alt me-1 text-muted"></i>{{ $sale->customer->address }}</div>
-                    @endif
-                    @if($sale->customer)
-                        <div class="small pt-2 border-top">
-                            <span class="text-muted">Customer Total Balance:</span>
-                            <strong class="{{ $sale->customer->current_balance > 0 ? 'text-danger' : 'text-success' }}">
-                                ₹{{ number_format($sale->customer->current_balance, 2) }}
-                            </strong>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ route('admin.sales.print', $sale->id) }}" target="_blank" class="btn btn-secondary"><i class="fa-solid fa-print me-1"></i> Print Invoice</a>
     </div>
-
 </div>
+@push('styles')
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        #print-area, #print-area * {
+            visibility: visible;
+        }
+        #print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            box-shadow: none !important;
+            border: none !important;
+        }
+        .card {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .card-body {
+            padding: 0 !important;
+        }
+    }
+</style>
+@endpush
 
-<!-- Collect Payment Modal -->
-@if($sale->due_amount > 0)
-<div class="modal fade" id="collectPaymentModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{{ route('admin.sales.payment', $sale) }}" method="POST">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Collect Outstanding Payment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-warning py-2 small mb-3">
-                        Remaining Due for Invoice <strong>{{ $sale->invoice_no }}</strong>: <strong>₹{{ number_format($sale->due_amount, 2) }}</strong>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">Amount Received (₹) <span class="text-danger">*</span></label>
-                        <input type="number" step="0.01" name="amount" class="form-control fw-bold" max="{{ $sale->due_amount }}" value="{{ $sale->due_amount }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">Payment Date <span class="text-danger">*</span></label>
-                        <input type="date" name="payment_date" class="form-control" value="{{ date('Y-m-d') }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">Payment Method <span class="text-danger">*</span></label>
-                        <select name="payment_method" class="form-select" required>
-                            <option value="cash" selected>Cash</option>
-                            <option value="upi">UPI (GPay / PhonePe / Paytm)</option>
-                            <option value="card">Card (Debit / Credit)</option>
-                            <option value="bank_transfer">Bank Transfer</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">Transaction Reference / UTR</label>
-                        <input type="text" name="transaction_ref" class="form-control" placeholder="e.g. UPI/12345678">
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label fw-semibold small">Notes</label>
-                        <input type="text" name="notes" class="form-control" placeholder="Payment receipt notes...">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success fw-bold">Record Payment</button>
-                </div>
-            </form>
+<div class="card shadow-sm border-0 mb-4" id="print-area">
+    <div class="card-body p-5">
+        <div class="row mb-5">
+            <div class="col-md-6">
+                <h2 class="fw-bold text-primary mb-1">ALTAMASH MOBILE</h2>
+                <p class="text-muted mb-0">New narsala road, <br>opposite Dhanashree apartment</p>
+                <p class="text-muted mb-0">Narsala, Nagpur, Maharashtra, 440034.</p>
+                <p class="text-muted">Phone: 8956586537</p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <h1 class="fw-bold text-uppercase text-muted">Invoice</h1>
+                <h5 class="mb-1"><strong>Invoice #:</strong> {{ $sale->invoice_number }}</h5>
+                <p class="mb-0"><strong>Date:</strong> {{ $sale->sale_date->format('d M, Y') }}</p>
+                <p class="mb-0"><strong>Status:</strong> 
+                    @if($sale->payment_status == 'paid')
+                        <span class="text-success fw-bold">PAID</span>
+                    @elseif($sale->payment_status == 'partial')
+                        <span class="text-warning fw-bold">PARTIAL</span>
+                    @else
+                        <span class="text-danger fw-bold">UNPAID</span>
+                    @endif
+                </p>
+            </div>
+        </div>
+
+        <div class="row mb-5">
+            <div class="col-md-12">
+                <h5 class="fw-bold">Bill To:</h5>
+                @if($sale->customer)
+                    <p class="mb-0 fw-bold">{{ $sale->customer->name }}</p>
+                    <p class="mb-0">{{ $sale->customer->address ?? '' }}</p>
+                    <p class="mb-0">{{ $sale->customer->city ?? '' }}{{ $sale->customer->state ? ', ' . $sale->customer->state : '' }}</p>
+                    <p class="mb-0">Phone: {{ $sale->customer->phone ?? 'N/A' }}</p>
+                @else
+                    <p class="mb-0 fw-bold">Walk-in Customer</p>
+                @endif
+            </div>
+        </div>
+
+        <div class="table-responsive mb-4">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Item Description</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-end">Unit Price</th>
+                        <th class="text-end">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($sale->items as $index => $item)
+                    <tr>
+                        <td>{{ $index + 1 }}</td>
+                        <td>
+                            <strong>{{ $item->product->name }}</strong>
+                        </td>
+                        <td class="text-center">{{ $item->quantity }}</td>
+                        <td class="text-end">₹{{ number_format($item->unit_price, 2) }}</td>
+                        <td class="text-end fw-bold">₹{{ number_format($item->subtotal, 2) }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row">
+            <div class="col-md-7">
+                <p class="text-muted"><strong>Notes:</strong> {{ $sale->notes ?? 'Thank you for your business!' }}</p>
+            </div>
+            <div class="col-md-5">
+                <table class="table table-sm table-borderless">
+                    <tr>
+                        <td class="text-end"><strong>Subtotal:</strong></td>
+                        <td class="text-end">₹{{ number_format($sale->subtotal, 2) }}</td>
+                    </tr>
+                    @if($sale->discount > 0)
+                    <tr>
+                        <td class="text-end"><strong>Discount:</strong></td>
+                        <td class="text-end text-danger">- ₹{{ number_format($sale->discount, 2) }}</td>
+                    </tr>
+                    @endif
+                    @if($sale->tax > 0)
+                    <tr>
+                        <td class="text-end"><strong>Tax:</strong></td>
+                        <td class="text-end">₹{{ number_format($sale->tax, 2) }}</td>
+                    </tr>
+                    @endif
+                    <tr class="border-top border-bottom">
+                        <td class="text-end py-3"><h4 class="fw-bold mb-0">Grand Total:</h4></td>
+                        <td class="text-end py-3"><h4 class="fw-bold text-primary mb-0">₹{{ number_format($sale->grand_total, 2) }}</h4></td>
+                    </tr>
+                    <tr>
+                        <td class="text-end pt-3">Amount Paid:</td>
+                        <td class="text-end pt-3 text-success">₹{{ number_format($sale->paid_amount, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-end">Amount Due:</td>
+                        <td class="text-end text-danger">₹{{ number_format($sale->due_amount, 2) }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <div class="mt-5 text-center text-muted border-top pt-3">
+            <small>This is a computer-generated invoice and does not require a signature.</small>
         </div>
     </div>
 </div>
-@endif
 @endsection
+
+

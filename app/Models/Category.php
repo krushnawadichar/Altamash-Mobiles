@@ -2,19 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'parent_id',
-        'name',
-        'slug',
-        'description',
-        'status',
+        'name', 'slug', 'parent_id', 'image', 'description', 
+        'status', 'seo_title', 'seo_description'
     ];
 
     public function parent()
@@ -22,7 +16,7 @@ class Category extends Model
         return $this->belongsTo(Category::class, 'parent_id');
     }
 
-    public function subcategories()
+    public function children()
     {
         return $this->hasMany(Category::class, 'parent_id');
     }

@@ -1,133 +1,79 @@
-@extends('layouts.app')
-
-@section('title', 'Edit Supplier - Altamash Mobiles')
+@extends('layouts.admin')
 
 @section('content')
-<div class="py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold">
-            <i class="fas fa-edit me-2 text-warning"></i> Edit Supplier
-        </h2>
-        <a href="{{ route('admin.suppliers.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Back
-        </a>
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="fw-bold">Edit Supplier: {{ $supplier->name }}</h2>
+        <a href="{{ route('admin.suppliers.index') }}" class="text-decoration-none"><i class="fa-solid fa-arrow-left me-1"></i> Back to Suppliers</a>
     </div>
+</div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <form action="{{ route('admin.suppliers.update', $supplier->id) }}" method="POST">
-                @csrf
-                @method('PUT')
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="name" class="form-label fw-bold">Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control @error('name') is-invalid @enderror" 
-                                   id="name" name="name" value="{{ old('name', $supplier->name) }}" required>
-                            @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="email" class="form-label fw-bold">Email <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control @error('email') is-invalid @enderror" 
-                                   id="email" name="email" value="{{ old('email', $supplier->email) }}" required>
-                            @error('email')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="phone" class="form-label fw-bold">Phone <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control @error('phone') is-invalid @enderror" 
-                                   id="phone" name="phone" value="{{ old('phone', $supplier->phone) }}" required>
-                            @error('phone')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="alternative_phone" class="form-label fw-bold">Alternative Phone</label>
-                            <input type="text" class="form-control @error('alternative_phone') is-invalid @enderror" 
-                                   id="alternative_phone" name="alternative_phone" value="{{ old('alternative_phone', $supplier->alternative_phone) }}">
-                            @error('alternative_phone')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="col-md-12">
-                        <div class="mb-3">
-                            <label for="address" class="form-label fw-bold">Address <span class="text-danger">*</span></label>
-                            <textarea class="form-control @error('address') is-invalid @enderror" 
-                                      id="address" name="address" rows="2" required>{{ old('address', $supplier->address) }}</textarea>
-                            @error('address')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="company_name" class="form-label fw-bold">Company Name</label>
-                            <input type="text" class="form-control @error('company_name') is-invalid @enderror" 
-                                   id="company_name" name="company_name" value="{{ old('company_name', $supplier->company_name) }}">
-                            @error('company_name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="opening_balance" class="form-label fw-bold">Opening Balance</label>
-                            <input type="number" step="0.01" class="form-control @error('opening_balance') is-invalid @enderror" 
-                                   id="opening_balance" name="opening_balance" value="{{ old('opening_balance', $supplier->opening_balance) }}">
-                            @error('opening_balance')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="col-md-12">
-                        <div class="mb-3">
-                            <label for="notes" class="form-label fw-bold">Notes</label>
-                            <textarea class="form-control @error('notes') is-invalid @enderror" 
-                                      id="notes" name="notes" rows="2">{{ old('notes', $supplier->notes) }}</textarea>
-                            @error('notes')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="col-md-12">
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" 
-                                       id="is_active" name="is_active" value="1" 
-                                       {{ $supplier->is_active ? 'checked' : '' }}>
-                                <label class="form-check-label fw-bold" for="is_active">Active</label>
-                            </div>
-                        </div>
-                    </div>
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <form action="{{ route('admin.suppliers.update', $supplier) }}" method="POST">
+            @csrf
+            @method('PUT')
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Contact Person Name <span class="text-danger">*</span></label>
+                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $supplier->name) }}" required>
+                    @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
-
-                <div class="d-flex justify-content-end gap-2">
-                    <a href="{{ route('admin.suppliers.index') }}" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-save me-1"></i> Update Supplier
-                    </button>
+                <div class="col-md-6">
+                    <label class="form-label">Company Name</label>
+                    <input type="text" name="company_name" class="form-control @error('company_name') is-invalid @enderror" value="{{ old('company_name', $supplier->company_name) }}">
+                    @error('company_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Phone</label>
+                    <input type="text" name="phone" class="form-control @error('phone') is-invalid @enderror" value="{{ old('phone', $supplier->phone) }}">
+                    @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', $supplier->email) }}">
+                    @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">GST Number</label>
+                    <input type="text" name="gst_number" class="form-control @error('gst_number') is-invalid @enderror" value="{{ old('gst_number', $supplier->gst_number) }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">City</label>
+                    <input type="text" name="city" class="form-control @error('city') is-invalid @enderror" value="{{ old('city', $supplier->city) }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">State</label>
+                    <input type="text" name="state" class="form-control @error('state') is-invalid @enderror" value="{{ old('state', $supplier->state) }}">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Full Address</label>
+                <textarea name="address" class="form-control @error('address') is-invalid @enderror" rows="2">{{ old('address', $supplier->address) }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Notes</label>
+                <textarea name="notes" class="form-control @error('notes') is-invalid @enderror" rows="2">{{ old('notes', $supplier->notes) }}</textarea>
+            </div>
+
+            <div class="mb-4 form-check">
+                <input type="checkbox" name="status" value="1" class="form-check-input" id="statusCheck" {{ old('status', $supplier->status) ? 'checked' : '' }}>
+                <label class="form-check-label" for="statusCheck">Active Status</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary px-4">Update Supplier</button>
+        </form>
     </div>
 </div>
 @endsection
+
+

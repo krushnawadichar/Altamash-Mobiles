@@ -2,172 +2,107 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Brand;
-use App\Models\Category;
-use App\Models\Customer;
-use App\Models\Product;
-use App\Models\ProductSerial;
-use App\Models\Sale;
-use App\Models\Setting;
-use App\Services\PosService;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+
+use App\Models\Product;
+use App\Models\Customer;
+use App\Models\Sale;
+use App\Models\SaleItem;
+use App\Models\InventoryTransaction;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PosController extends Controller
 {
-    protected PosService $posService;
-
-    public function __construct(PosService $posService)
-    {
-        $this->posService = $posService;
-    }
-
     public function index()
     {
-        $categories = Category::where('status', 'active')->get();
-        $brands = Brand::where('status', 'active')->get();
-        $customers = Customer::latest()->take(50)->get();
-        $defaultTaxPercent = Setting::get('default_tax_percent', 18);
-
-        return view('admin.pos.index', compact('categories', 'brands', 'customers', 'defaultTaxPercent'));
+        $products = Product::with('mainImage')->where('status', 1)->where('stock_quantity', '>', 0)->get();
+        $customers = Customer::where('status', 1)->get();
+        return view('admin.pos.index', compact('products', 'customers'));
     }
 
-    /**
-     * AJAX search endpoint for POS
-     * Supports search by name, SKU, barcode, IMEI, model
-     */
-    public function search(Request $request)
-    {
-        $query = $request->input('query');
-        $categoryId = $request->input('category_id');
-
-        if (empty($query) && empty($categoryId)) {
-            $products = Product::where('status', 'active')
-                ->where('current_stock', '>', 0)
-                ->with(['brand', 'category', 'availableSerials'])
-                ->take(24)
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'exact_imei_match' => false,
-                'products' => $products,
-            ]);
-        }
-
-        // 1. Direct IMEI barcode match check
-        if (!empty($query)) {
-            $serialMatch = ProductSerial::with('product')
-                ->where('status', 'available')
-                ->where(function ($q) use ($query) {
-                    $q->where('imei_1', $query)
-                      ->orWhere('imei_2', $query)
-                      ->orWhere('serial_no', $query);
-                })->first();
-
-            if ($serialMatch && $serialMatch->product) {
-                return response()->json([
-                    'success' => true,
-                    'exact_imei_match' => true,
-                    'serial' => $serialMatch,
-                    'product' => $serialMatch->product->load(['brand', 'category', 'availableSerials']),
-                ]);
-            }
-        }
-
-        // 2. Standard product search
-        $q = Product::where('status', 'active')->with(['brand', 'category', 'availableSerials']);
-
-        if (!empty($categoryId)) {
-            $q->where('category_id', $categoryId);
-        }
-
-        if (!empty($query)) {
-            $q->search($query);
-        }
-
-        $products = $q->take(30)->get();
-
-        return response()->json([
-            'success' => true,
-            'exact_imei_match' => false,
-            'products' => $products,
-        ]);
-    }
-
-    /**
-     * Complete checkout and generate invoice
-     */
     public function store(Request $request)
     {
         $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'grand_total' => 'required|numeric|min:0',
+            'products' => 'required|array',
+            'products.*' => 'required|exists:products,id',
+            'prices' => 'required|array',
+            'quantities' => 'required|array',
         ]);
 
+        DB::beginTransaction();
+
         try {
-            $sale = $this->posService->processSale($request->all());
+            $payment_status = 'unpaid';
+            if ($request->paid_amount >= $request->grand_total) {
+                $payment_status = 'paid';
+            } elseif ($request->paid_amount > 0) {
+                $payment_status = 'partial';
+            }
 
-            return response()->json([
-                'success' => true,
-                'message' => "Sale {$sale->invoice_no} completed successfully.",
-                'sale_id' => $sale->id,
-                'invoice_no' => $sale->invoice_no,
-                'redirect_url' => route('admin.pos.invoice', $sale->id),
+            // Generate Invoice Number
+            $invoiceNumber = 'INV-' . strtoupper(Str::random(6)) . '-' . time();
+
+            $sale = Sale::create([
+                'customer_id' => $request->customer_id,
+                'invoice_number' => $invoiceNumber,
+                'sale_date' => now()->toDateString(),
+                'subtotal' => $request->subtotal,
+                'tax' => $request->tax,
+                'discount' => $request->discount,
+                'grand_total' => $request->grand_total,
+                'paid_amount' => $request->paid_amount,
+                'due_amount' => $request->due_amount,
+                'payment_method' => $request->payment_method,
+                'payment_status' => $payment_status,
+                'created_by' => auth()->id()
             ]);
+
+            foreach ($request->products as $index => $productId) {
+                $price = $request->prices[$index];
+                $qty = $request->quantities[$index];
+                $subtotal = $price * $qty;
+
+                SaleItem::create([
+                    'sale_id' => $sale->id,
+                    'product_id' => $productId,
+                    'quantity' => $qty,
+                    'unit_price' => $price,
+                    'subtotal' => $subtotal
+                ]);
+
+                // Update product stock
+                $product = Product::find($productId);
+                $prevStock = $product->stock_quantity;
+                $newStock = $prevStock - $qty;
+                
+                $product->update([
+                    'stock_quantity' => $newStock
+                ]);
+
+                // Log Transaction
+                InventoryTransaction::create([
+                    'product_id' => $productId,
+                    'transaction_type' => 'sale',
+                    'quantity' => $qty,
+                    'previous_stock' => $prevStock,
+                    'new_stock' => $newStock,
+                    'reference' => 'Sale #' . $sale->invoice_number,
+                    'user_id' => auth()->id()
+                ]);
+            }
+            
+            if ($request->customer_id) {
+                $customer = Customer::find($request->customer_id);
+                $customer->increment('total_purchases', $request->grand_total);
+            }
+
+            DB::commit();
+            return redirect()->route('admin.sales.show', $sale)->with('success', 'Sale completed successfully!');
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 422);
+            DB::rollBack();
+            return back()->with('error', 'Error processing sale: ' . $e->getMessage())->withInput();
         }
-    }
-
-    /**
-     * Printable invoice view (A4 and 80mm thermal receipt formats)
-     */
-    public function invoice(Sale $sale)
-    {
-        $sale->load(['customer', 'items.product.brand', 'items.serial', 'payments', 'creator']);
-        $settings = [
-            'shop_name' => Setting::get('shop_name', 'MobileCare POS'),
-            'shop_tagline' => Setting::get('shop_tagline', 'Sales & Service'),
-            'shop_address' => Setting::get('shop_address', ''),
-            'shop_phone' => Setting::get('shop_phone', ''),
-            'shop_email' => Setting::get('shop_email', ''),
-            'gst_number' => Setting::get('gst_number', ''),
-            'currency_symbol' => Setting::get('currency_symbol', '₹'),
-            'terms_conditions' => Setting::get('terms_conditions', ''),
-            'invoice_footer' => Setting::get('invoice_footer', ''),
-        ];
-
-        return view('admin.pos.invoice', compact('sale', 'settings'));
-    }
-
-    /**
-     * Download PDF Invoice
-     */
-    public function downloadPdf(Sale $sale)
-    {
-        $sale->load(['customer', 'items.product.brand', 'items.serial', 'payments', 'creator']);
-        $settings = [
-            'shop_name' => Setting::get('shop_name', 'MobileCare POS'),
-            'shop_tagline' => Setting::get('shop_tagline', 'Sales & Service'),
-            'shop_address' => Setting::get('shop_address', ''),
-            'shop_phone' => Setting::get('shop_phone', ''),
-            'shop_email' => Setting::get('shop_email', ''),
-            'gst_number' => Setting::get('gst_number', ''),
-            'currency_symbol' => Setting::get('currency_symbol', '₹'),
-            'terms_conditions' => Setting::get('terms_conditions', ''),
-            'invoice_footer' => Setting::get('invoice_footer', ''),
-        ];
-
-        $pdf = Pdf::loadView('admin.pos.pdf', compact('sale', 'settings'))
-            ->setPaper('a4', 'portrait');
-
-        return $pdf->download("{$sale->invoice_no}.pdf");
     }
 }

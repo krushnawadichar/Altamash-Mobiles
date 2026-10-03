@@ -1,117 +1,176 @@
 @extends('layouts.admin')
 
-@section('title', 'System & Shop Settings')
-@section('page_title', 'Shop Configuration & Settings')
-
 @section('content')
-<div class="container-fluid px-0">
-
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <div>
-            <h4 class="fw-bold mb-0">Settings</h4>
-            <small class="text-muted">Configure store identity, invoice branding, tax rates, and alert thresholds</small>
-        </div>
+<div class="row mb-4">
+    <div class="col-md-12 d-flex justify-content-between align-items-center">
+        <h2 class="fw-bold m-0"><i class="fa-solid fa-cog text-primary me-2"></i> Store Settings</h2>
+        <button type="submit" form="settingsForm" class="btn btn-primary px-4"><i class="fa-solid fa-save me-2"></i> Save Changes</button>
     </div>
+</div>
 
-    <form action="{{ route('admin.settings.update') }}" method="POST" enctype="multipart/form-data">
-        @csrf
-        <div class="row g-3">
-
-            <!-- Shop Identity & Contact -->
-            <div class="col-lg-6">
-                <div class="card border-0 shadow-sm mb-3">
-                    <div class="card-header bg-white">
-                        <span class="fw-bold"><i class="bi bi-shop me-1 text-primary"></i>Shop Identity & Branding</span>
-                    </div>
-                    <div class="card-body p-3">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">Shop / Business Name <span class="text-danger">*</span></label>
-                            <input type="text" name="shop_name" class="form-control" value="{{ old('shop_name', $settings['shop_name'] ?? 'MobileCare') }}" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">Shop Tagline</label>
-                            <input type="text" name="shop_tagline" class="form-control" value="{{ old('shop_tagline', $settings['shop_tagline'] ?? 'Sales & Multi-Brand Service Center') }}">
-                        </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <label class="form-label fw-semibold small">Phone / Mobile <span class="text-danger">*</span></label>
-                                <input type="text" name="shop_phone" class="form-control" value="{{ old('shop_phone', $settings['shop_phone'] ?? '9876543210') }}" required>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label fw-semibold small">Email Address</label>
-                                <input type="email" name="shop_email" class="form-control" value="{{ old('shop_email', $settings['shop_email'] ?? 'contact@mobileshop.com') }}">
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">GSTIN Number</label>
-                            <input type="text" name="gst_number" class="form-control" placeholder="e.g. 27AAAAA0000A1Z5" value="{{ old('gst_number', $settings['gst_number'] ?? '') }}">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">Shop Physical Address</label>
-                            <textarea name="shop_address" class="form-control" rows="2">{{ old('shop_address', $settings['shop_address'] ?? 'Shop #12, Galaxy Commercial Complex, Station Road') }}</textarea>
-                        </div>
-
-                        <div class="mb-0">
-                            <label class="form-label fw-semibold small">Change Shop Logo</label>
-                            <input type="file" name="shop_logo" class="form-control" accept="image/*">
-                            @if(!empty($settings['shop_logo']))
-                                <div class="mt-2">
-                                    <img src="{{ asset('storage/' . $settings['shop_logo']) }}" class="rounded border p-1" height="50">
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tax, Alerts & Invoice Terms -->
-            <div class="col-lg-6">
-                <div class="card border-0 shadow-sm mb-3">
-                    <div class="card-header bg-white">
-                        <span class="fw-bold"><i class="bi bi-gear-wide-connected me-1 text-primary"></i>Taxes & Inventory Alerts</span>
-                    </div>
-                    <div class="card-body p-3">
-                        <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <label class="form-label fw-semibold small">Default GST / Tax Rate (%)</label>
-                                <input type="number" step="0.01" name="default_tax_percent" class="form-control" value="{{ old('default_tax_percent', $settings['default_tax_percent'] ?? 18) }}">
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label fw-semibold small">Low Stock Alert Threshold</label>
-                                <input type="number" name="low_stock_threshold" class="form-control" value="{{ old('low_stock_threshold', $settings['low_stock_threshold'] ?? 5) }}">
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">Currency Symbol</label>
-                            <input type="text" name="currency_symbol" class="form-control" value="{{ old('currency_symbol', $settings['currency_symbol'] ?? '₹') }}">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">Invoice Terms & Conditions</label>
-                            <textarea name="terms_conditions" class="form-control" rows="3">{{ old('terms_conditions', $settings['terms_conditions'] ?? '') }}</textarea>
-                        </div>
-
-                        <div class="mb-0">
-                            <label class="form-label fw-semibold small">Invoice Footer Note</label>
-                            <input type="text" name="invoice_footer" class="form-control" value="{{ old('invoice_footer', $settings['invoice_footer'] ?? 'Thank you for choosing MobileCare! Visit again.') }}">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="text-end">
-                    <button type="submit" class="btn btn-primary btn-lg fw-bold shadow-sm px-4">
-                        <i class="bi bi-check-circle-fill me-1"></i> Save Configuration
+<div class="row">
+    <div class="col-md-3">
+        <!-- Settings Nav -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-0">
+                <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                    <button class="nav-link active text-start py-3 px-4 border-bottom rounded-0 fw-bold" id="v-pills-general-tab" data-bs-toggle="pill" data-bs-target="#v-pills-general" type="button" role="tab">
+                        <i class="fa-solid fa-store me-2"></i> General Info
+                    </button>
+                    <button class="nav-link text-start py-3 px-4 border-bottom rounded-0 fw-bold" id="v-pills-contact-tab" data-bs-toggle="pill" data-bs-target="#v-pills-contact" type="button" role="tab">
+                        <i class="fa-solid fa-address-book me-2"></i> Contact Details
+                    </button>
+                    <button class="nav-link text-start py-3 px-4 border-bottom rounded-0 fw-bold" id="v-pills-currency-tab" data-bs-toggle="pill" data-bs-target="#v-pills-currency" type="button" role="tab">
+                        <i class="fa-solid fa-money-bill-wave me-2"></i> Currency & Tax
+                    </button>
+                    <button class="nav-link text-start py-3 px-4 rounded-0 fw-bold" id="v-pills-api-tab" data-bs-toggle="pill" data-bs-target="#v-pills-api" type="button" role="tab">
+                        <i class="fa-solid fa-code me-2"></i> API Integrations
                     </button>
                 </div>
             </div>
-
         </div>
-    </form>
+    </div>
 
+    <div class="col-md-9">
+        <form action="#" method="POST" id="settingsForm" onsubmit="event.preventDefault(); alert('Settings saved successfully! (Demo mode)');">
+            @csrf
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4 p-lg-5">
+                    <div class="tab-content" id="v-pills-tabContent">
+                        
+                        <!-- General Info Tab -->
+                        <div class="tab-pane fade show active" id="v-pills-general" role="tabpanel">
+                            <h4 class="fw-bold mb-4 border-bottom pb-2">General Information</h4>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Store Name</label>
+                                <input type="text" class="form-control" name="store_name" value="ALTAMASH MOBILE">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Tagline / Slogan</label>
+                                <input type="text" class="form-control" name="store_tagline" value="Your trusted electronics partner">
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Store Logo (Light)</label>
+                                    <input type="file" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Store Logo (Dark)</label>
+                                    <input type="file" class="form-control">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">About Store</label>
+                                <textarea class="form-control" rows="4">We are a premium electronics retail store providing the best smartphones, laptops, and home appliances.</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Contact Details Tab -->
+                        <div class="tab-pane fade" id="v-pills-contact" role="tabpanel">
+                            <h4 class="fw-bold mb-4 border-bottom pb-2">Contact Details</h4>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Primary Email</label>
+                                    <input type="email" class="form-control" value="support@gmail.com">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Support Phone</label>
+                                    <input type="text" class="form-control" value="+91 98765 43210">
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Physical Address</label>
+                                <textarea class="form-control" rows="3">123 Tech Park Avenue, Cyber City, Bangalore, India 560001</textarea>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">WhatsApp Number</label>
+                                    <input type="text" class="form-control" value="+91 98765 43210">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Support Hours</label>
+                                    <input type="text" class="form-control" value="Mon - Sat (10:00 AM - 9:00 PM)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Currency & Tax Tab -->
+                        <div class="tab-pane fade" id="v-pills-currency" role="tabpanel">
+                            <h4 class="fw-bold mb-4 border-bottom pb-2">Currency & Tax Configurations</h4>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Base Currency</label>
+                                    <select class="form-select">
+                                        <option value="INR" selected>INR (₹) - Indian Rupee</option>
+                                        <option value="USD">USD ($) - US Dollar</option>
+                                        <option value="EUR">EUR (€) - Euro</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Currency Position</label>
+                                    <select class="form-select">
+                                        <option value="left" selected>Left (₹100)</option>
+                                        <option value="right">Right (100₹)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Default Tax Rate (%)</label>
+                                <input type="number" class="form-control" value="18" step="0.01">
+                                <div class="form-text">This tax rate will be applied by default if a product has no specific tax assigned.</div>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="taxIncluded" checked>
+                                <label class="form-check-label fw-bold" for="taxIncluded">Prices entered include tax</label>
+                            </div>
+                        </div>
+
+                        <!-- API Integrations Tab -->
+                        <div class="tab-pane fade" id="v-pills-api" role="tabpanel">
+                            <h4 class="fw-bold mb-4 border-bottom pb-2">API Integrations</h4>
+                            
+                            <div class="card bg-light border-0 mb-4">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-credit-card me-2"></i> Razorpay Payment Gateway</h5>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Razorpay Key ID</label>
+                                        <input type="text" class="form-control" value="rzp_test_xxxxxx">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Razorpay Key Secret</label>
+                                        <input type="password" class="form-control" value="xxxxxxxxxxxxxxxxx">
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="razorpayEnable" checked>
+                                        <label class="form-check-label fw-bold" for="razorpayEnable">Enable Razorpay Checkout</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
+
+@push('styles')
+<style>
+    .nav-pills .nav-link {
+        color: #4b5563;
+        transition: all 0.2s;
+    }
+    .nav-pills .nav-link:hover {
+        background-color: #f3f4f6;
+    }
+    .nav-pills .nav-link.active {
+        background-color: #f8f9fa;
+        color: var(--primary-color);
+        border-right: 4px solid var(--primary-color) !important;
+    }
+</style>
+@endpush
 @endsection
+
+

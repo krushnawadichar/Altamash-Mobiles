@@ -3,66 +3,97 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\UserRequest;
-use App\Services\UserService;
-use App\Services\RoleService;
 use Illuminate\Http\Request;
+
+use App\Models\User;
+use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    protected $userService;
-    protected $roleService;
-
-    public function __construct(UserService $userService, RoleService $roleService)
-    {
-        $this->userService = $userService;
-        $this->roleService = $roleService;
-    }
-
     public function index()
     {
-        $users = $this->userService->getAllUsers();
+        $users = User::with(['roles', 'permissions'])->get();
         return view('admin.users.index', compact('users'));
     }
 
     public function create()
     {
-        $roles = $this->roleService->getAllRoles();
-        return view('admin.users.create', compact('roles'));
+        $roles = Role::all();
+        $permissions = \Spatie\Permission\Models\Permission::all();
+        return view('admin.users.create', compact('roles', 'permissions'));
     }
 
-    public function store(UserRequest $request)
+    public function store(Request $request)
     {
-        $this->userService->createUser($request->validated());
-        return redirect()->route('admin.users.index')
-            ->with('success', 'User created successfully.');
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|min:8|confirmed',
+            'roles' => 'nullable|array',
+            'permissions' => 'nullable|array'
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+        ]);
+
+        if ($request->has('roles')) {
+            $user->assignRole($request->roles);
+        }
+        if ($request->has('permissions')) {
+            $user->syncPermissions($request->permissions);
+        }
+
+        return redirect()->route('admin.users.index')->with('success', 'User created successfully.');
     }
 
-    public function edit($id)
+    public function edit(User $user)
     {
-        $user = $this->userService->getUserById($id);
-        $roles = $this->roleService->getAllRoles();
-        return view('admin.users.edit', compact('user', 'roles'));
+        $roles = Role::all();
+        $permissions = \Spatie\Permission\Models\Permission::all();
+        return view('admin.users.edit', compact('user', 'roles', 'permissions'));
     }
 
-    public function update(UserRequest $request, $id)
+    public function update(Request $request, User $user)
     {
-        $this->userService->updateUser($id, $request->validated());
-        return redirect()->route('admin.users.index')
-            ->with('success', 'User updated successfully.');
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,'.$user->id,
+            'password' => 'nullable|min:8|confirmed',
+            'roles' => 'nullable|array',
+            'permissions' => 'nullable|array'
+        ]);
+
+        $data = [
+            'name' => $request->name,
+            'email' => $request->email,
+        ];
+
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $user->update($data);
+        
+        $roles = $request->roles ?? [];
+        $user->syncRoles($roles);
+
+        $permissions = $request->permissions ?? [];
+        $user->syncPermissions($permissions);
+
+        return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
     }
 
-    public function destroy($id)
+    public function destroy(User $user)
     {
-        $this->userService->deleteUser($id);
-        return redirect()->route('admin.users.index')
-            ->with('success', 'User deleted successfully.');
-    }
-
-    public function toggleStatus($id)
-    {
-        $this->userService->toggleStatus($id);
-        return redirect()->route('admin.users.index')
-            ->with('success', 'User status updated successfully.');
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'You cannot delete your own account.');
+        }
+        
+        $user->delete();
+        return redirect()->route('admin.users.index')->with('success', 'User deleted successfully.');
     }
 }

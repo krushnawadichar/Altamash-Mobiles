@@ -1,119 +1,75 @@
 <?php
 
-use App\Http\Controllers\ActivityLogController;
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ExpenseController;
-use App\Http\Controllers\InventoryController;
-use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\PurchaseController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\RepairController;
-use App\Http\Controllers\SaleController;
-use App\Http\Controllers\SaleReturnController;
-use App\Http\Controllers\SettingController;
-use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\SupplierController;
-use App\Http\Controllers\TechnicianController;
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\InventoryTransactionController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\SaleController;
+use App\Http\Controllers\PosController;
+use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\RepairController;
+use App\Http\Controllers\FrontendController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SettingController;
 use Illuminate\Support\Facades\Route;
 
-// Redirect root to login or dashboard
-Route::get('/', function () {
-    return auth()->check() ? redirect()->route('admin.dashboard') : redirect()->route('login');
+Route::get('/', [FrontendController::class, 'home'])->name('home');
+Route::get('/shop', [FrontendController::class, 'shop'])->name('shop');
+Route::get('/product/{slug}', [FrontendController::class, 'product'])->name('product.show');
+Route::get('/contact', [FrontendController::class, 'contact'])->name('contact');
+
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart/add/{id}', [CartController::class, 'add'])->name('cart.add');
+Route::patch('/cart/update', [CartController::class, 'update'])->name('cart.update');
+Route::delete('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
+
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+Route::post('/checkout', [CheckoutController::class, 'process'])->name('checkout.process');
+Route::get('/checkout/success', [CheckoutController::class, 'success'])->name('checkout.success');
+
+use App\Http\Controllers\CustomerDashboardController;
+
+Route::get('/dashboard', [CustomerDashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Authentication Routes
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [AdminController::class, 'index'])->name('dashboard');
+    
+    Route::resource('brands', BrandController::class)->except(['show']);
+    Route::resource('categories', CategoryController::class)->except(['show']);
+    Route::resource('products', ProductController::class)->except(['show']);
+    
+    Route::resource('suppliers', SupplierController::class)->except(['show']);
+    Route::resource('purchases', PurchaseController::class)->only(['index', 'create', 'store', 'show']);
+    
+    Route::get('inventory', [InventoryTransactionController::class, 'index'])->name('inventory.index');
 
-// Authenticated Admin Routes
-Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
-
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-    // Profile & Password
-    Route::get('/profile', [AuthController::class, 'profile'])->name('profile');
-    Route::post('/profile', [AuthController::class, 'updateProfile'])->name('profile.update');
-    Route::post('/profile/password', [AuthController::class, 'changePassword'])->name('profile.password');
-
-    // Products & Barcodes
-    Route::get('/products/{product}/barcode', [ProductController::class, 'barcode'])->name('products.barcode');
-    Route::resource('products', ProductController::class);
-
-    // Categories & Brands
-    Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
-    Route::resource('brands', BrandController::class)->except(['create', 'edit', 'show']);
-
-    // Inventory Management & IMEI Tracking
-    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
-    Route::get('/inventory/imeis', [InventoryController::class, 'imeis'])->name('inventory.imeis');
-    Route::get('/inventory/transactions', [InventoryController::class, 'transactions'])->name('inventory.transactions');
-    Route::resource('inventory/adjustments', StockAdjustmentController::class)->names('inventory.adjustments')->only(['index', 'create', 'store']);
-
-    // Suppliers & Purchases
-    Route::resource('suppliers', SupplierController::class);
-    Route::post('/suppliers/{supplier}/payment', [SupplierController::class, 'makePayment'])->name('suppliers.payment');
-    Route::resource('purchases', PurchaseController::class);
-    Route::post('/purchases/{purchase}/payment', [PurchaseController::class, 'addPayment'])->name('purchases.payment');
-
-    // POS & Sales Management
-    Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
-    Route::get('/pos/search', [PosController::class, 'search'])->name('pos.search');
-    Route::post('/pos', [PosController::class, 'store']);
-    Route::post('/pos/sale', [PosController::class, 'store'])->name('pos.store');
-    Route::get('/pos/invoice/{sale}', [PosController::class, 'invoice'])->name('pos.invoice');
-    Route::get('/pos/invoice/{sale}/pdf', [PosController::class, 'downloadPdf'])->name('pos.pdf');
-
+    Route::resource('customers', CustomerController::class)->except(['show']);
     Route::resource('sales', SaleController::class)->only(['index', 'show']);
-    Route::post('/sales/{sale}/payment', [SaleController::class, 'addPayment'])->name('sales.payment');
-    Route::post('/sales/{sale}/cancel', [SaleController::class, 'cancel'])->name('sales.cancel');
+    Route::get('sales/{sale}/print', [SaleController::class, 'print'])->name('sales.print');
+    
+    Route::get('pos', [PosController::class, 'index'])->name('pos.index');
+    Route::post('pos', [PosController::class, 'store'])->name('pos.store');
 
-    // Sales Returns
-    Route::resource('sales-returns', SaleReturnController::class)->names('sales.returns')->only(['index', 'create', 'store']);
+    Route::resource('expenses', ExpenseController::class)->except(['show', 'edit', 'update']);
+    Route::resource('repairs', RepairController::class)->except(['show']);
 
-    // Customers
-    Route::resource('customers', CustomerController::class);
-    Route::post('/customers/{customer}/payment', [CustomerController::class, 'collectPayment'])->name('customers.payment');
-
-    // Mobile Repairs & Technicians
-    Route::resource('repairs', RepairController::class);
-    Route::post('/repairs/{repair}/add-part', [RepairController::class, 'addPart'])->name('repairs.add-part');
-    Route::post('/repairs/{repair}/update-status', [RepairController::class, 'updateStatus'])->name('repairs.update-status');
-    Route::post('/repairs/{repair}/payment', [RepairController::class, 'addPayment'])->name('repairs.payment');
-    Route::get('/repairs/{repair}/jobcard', [RepairController::class, 'jobCard'])->name('repairs.jobcard');
-    Route::get('/repairs/{repair}/jobcard/pdf', [RepairController::class, 'pdfJobCard'])->name('repairs.jobcard.pdf');
-    Route::get('/repairs/{repair}/invoice', [RepairController::class, 'invoice'])->name('repairs.invoice');
-    Route::get('/repairs/{repair}/invoice/pdf', [RepairController::class, 'pdfInvoice'])->name('repairs.invoice.pdf');
-
-    Route::resource('technicians', TechnicianController::class);
-
-    // Expenses
-    Route::resource('expenses', ExpenseController::class)->only(['index', 'store', 'destroy']);
-    Route::post('/expenses/categories', [ExpenseController::class, 'storeCategory'])->name('expenses.categories.store');
-
-    // Comprehensive Reports
-    Route::prefix('reports')->name('reports.')->group(function () {
-        Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
-        Route::get('/purchases', [ReportController::class, 'purchases'])->name('purchases');
-        Route::get('/inventory', [ReportController::class, 'inventory'])->name('inventory');
-        Route::get('/mobiles', [ReportController::class, 'mobiles'])->name('mobiles');
-        Route::get('/repairs', [ReportController::class, 'repairs'])->name('repairs');
-        Route::get('/profit-loss', [ReportController::class, 'profitLoss'])->name('profit-loss');
-    });
-
-    // Admin-only: Settings, Users, Activity Logs
-    Route::middleware('role:super_admin,admin')->group(function () {
-        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
-        Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
-
-        Route::resource('users', UserController::class)->except(['create', 'edit', 'show']);
-        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
-    });
+    Route::resource('users', UserController::class);
+    Route::resource('roles', RoleController::class);
+    Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
 });
+
+require __DIR__.'/auth.php';

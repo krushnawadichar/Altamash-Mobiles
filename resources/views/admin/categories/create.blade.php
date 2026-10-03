@@ -1,78 +1,76 @@
-@extends('layouts.app')
-
-@section('title', 'Create Category - Altamash Mobiles')
+@extends('layouts.admin')
 
 @section('content')
-<div class="py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold">
-            <i class="fas fa-plus-circle me-2 text-primary"></i> Create Category
-        </h2>
-        <a href="{{ route('admin.categories.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Back
-        </a>
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="fw-bold">Add Category</h2>
+        <a href="{{ route('admin.categories.index') }}" class="text-decoration-none"><i class="fa-solid fa-arrow-left me-1"></i> Back to Categories</a>
     </div>
+</div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <form action="{{ route('admin.categories.store') }}" method="POST">
-                @csrf
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="name" class="form-label fw-bold">Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control @error('name') is-invalid @enderror" 
-                                   id="name" name="name" value="{{ old('name') }}" required>
-                            @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="icon" class="form-label fw-bold">Icon</label>
-                            <input type="text" class="form-control @error('icon') is-invalid @enderror" 
-                                   id="icon" name="icon" value="{{ old('icon') }}" 
-                                   placeholder="e.g., fas fa-mobile">
-                            <small class="text-muted">Enter Font Awesome icon class</small>
-                            @error('icon')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="col-md-12">
-                        <div class="mb-3">
-                            <label for="description" class="form-label fw-bold">Description</label>
-                            <textarea class="form-control @error('description') is-invalid @enderror" 
-                                      id="description" name="description" rows="3">{{ old('description') }}</textarea>
-                            @error('description')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="col-md-12">
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" 
-                                       id="is_active" name="is_active" value="1" checked>
-                                <label class="form-check-label fw-bold" for="is_active">Active</label>
-                            </div>
-                        </div>
-                    </div>
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <form action="{{ route('admin.categories.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Category Name <span class="text-danger">*</span></label>
+                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" required>
+                    @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
-
-                <div class="d-flex justify-content-end gap-2">
-                    <a href="{{ route('admin.categories.index') }}" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Create Category
-                    </button>
+                <div class="col-md-6">
+                    <label class="form-label">Parent Category</label>
+                    <select name="parent_id" class="form-select @error('parent_id') is-invalid @enderror">
+                        <option value="">-- None (Main Category) --</option>
+                        @foreach($mainCategories as $cat)
+                            <option value="{{ $cat->id }}" {{ old('parent_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('parent_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Slug (Auto-generated if empty)</label>
+                    <input type="text" name="slug" class="form-control @error('slug') is-invalid @enderror" value="{{ old('slug') }}">
+                    @error('slug')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Category Image</label>
+                    <input type="file" name="image" class="form-control @error('image') is-invalid @enderror" accept="image/*">
+                    @error('image')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3">{{ old('description') }}</textarea>
+                @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            
+            <h5 class="mt-4 mb-3">SEO Details</h5>
+            <div class="row mb-3">
+                <div class="col-md-12 mb-3">
+                    <label class="form-label">SEO Title</label>
+                    <input type="text" name="seo_title" class="form-control @error('seo_title') is-invalid @enderror" value="{{ old('seo_title') }}">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">SEO Description</label>
+                    <textarea name="seo_description" class="form-control @error('seo_description') is-invalid @enderror" rows="2">{{ old('seo_description') }}</textarea>
+                </div>
+            </div>
+
+            <div class="mb-4 form-check">
+                <input type="checkbox" name="status" value="1" class="form-check-input" id="statusCheck" {{ old('status', '1') == '1' ? 'checked' : '' }}>
+                <label class="form-check-label" for="statusCheck">Active Status</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary px-4">Save Category</button>
+        </form>
     </div>
 </div>
 @endsection
+
+

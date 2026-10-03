@@ -2,57 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
-use App\Models\Purchase;
-use App\Models\PurchasePayment;
-use App\Models\Supplier;
-use App\Services\PurchaseService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+
+use App\Models\Purchase;
+use App\Models\PurchaseItem;
+use App\Models\Supplier;
+use App\Models\Product;
+use App\Models\InventoryTransaction;
+use Illuminate\Support\Facades\DB;
 
 class PurchaseController extends Controller
 {
-    protected PurchaseService $purchaseService;
-
-    public function __construct(PurchaseService $purchaseService)
+    public function index()
     {
-        $this->purchaseService = $purchaseService;
-    }
-
-    public function index(Request $request)
-    {
-        $query = Purchase::with(['supplier', 'creator'])->latest();
-
-        if ($request->filled('search')) {
-            $s = $request->search;
-            $query->where(function ($q) use ($s) {
-                $q->where('purchase_no', 'like', "%{$s}%")
-                  ->orWhere('supplier_invoice_no', 'like', "%{$s}%")
-                  ->orWhereHas('supplier', function ($sup) use ($s) {
-                      $sup->where('name', 'like', "%{$s}%");
-                  });
-            });
-        }
-
-        if ($request->filled('supplier_id')) {
-            $query->where('supplier_id', $request->supplier_id);
-        }
-
-        if ($request->filled('payment_status')) {
-            $query->where('payment_status', $request->payment_status);
-        }
-
-        $purchases = $query->paginate(15)->withQueryString();
-        $suppliers = Supplier::all();
-
-        return view('admin.purchases.index', compact('purchases', 'suppliers'));
+        $purchases = Purchase::with('supplier')->latest()->get();
+        return view('admin.purchases.index', compact('purchases'));
     }
 
     public function create()
     {
-        $suppliers = Supplier::all();
-        $products = Product::where('status', 'active')->get();
-
+        $suppliers = Supplier::where('status', 1)->get();
+        $products = Product::where('status', 1)->get();
         return view('admin.purchases.create', compact('suppliers', 'products'));
     }
 
@@ -61,57 +31,84 @@ class PurchaseController extends Controller
         $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'purchase_date' => 'required|date',
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.purchase_price' => 'required|numeric|min:0',
+            'products' => 'required|array',
+            'products.*' => 'required|exists:products,id',
+            'prices' => 'required|array',
+            'quantities' => 'required|array',
         ]);
 
+        DB::beginTransaction();
+
         try {
-            $purchase = $this->purchaseService->createPurchase($request->all());
-            return redirect()->route('admin.purchases.show', $purchase)->with('success', "Purchase {$purchase->purchase_no} recorded successfully.");
+            $payment_status = 'unpaid';
+            if ($request->paid_amount >= $request->grand_total) {
+                $payment_status = 'paid';
+            } elseif ($request->paid_amount > 0) {
+                $payment_status = 'partial';
+            }
+
+            $purchase = Purchase::create([
+                'supplier_id' => $request->supplier_id,
+                'invoice_number' => $request->invoice_number,
+                'purchase_date' => $request->purchase_date,
+                'subtotal' => $request->subtotal,
+                'tax' => $request->tax,
+                'discount' => $request->discount,
+                'grand_total' => $request->grand_total,
+                'paid_amount' => $request->paid_amount,
+                'due_amount' => $request->due_amount,
+                'payment_status' => $payment_status,
+                'notes' => $request->notes,
+                'created_by' => auth()->id()
+            ]);
+
+            foreach ($request->products as $index => $productId) {
+                $price = $request->prices[$index];
+                $qty = $request->quantities[$index];
+                $subtotal = $price * $qty;
+
+                PurchaseItem::create([
+                    'purchase_id' => $purchase->id,
+                    'product_id' => $productId,
+                    'quantity' => $qty,
+                    'purchase_price' => $price,
+                    'subtotal' => $subtotal
+                ]);
+
+                // Update product stock
+                $product = Product::find($productId);
+                $prevStock = $product->stock_quantity;
+                $newStock = $prevStock + $qty;
+                
+                $product->update([
+                    'stock_quantity' => $newStock,
+                    'purchase_price' => $price // Update cost price
+                ]);
+
+                // Log Transaction
+                InventoryTransaction::create([
+                    'product_id' => $productId,
+                    'transaction_type' => 'purchase',
+                    'quantity' => $qty,
+                    'previous_stock' => $prevStock,
+                    'new_stock' => $newStock,
+                    'reference' => 'Purchase #' . $purchase->id,
+                    'user_id' => auth()->id()
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->route('admin.purchases.index')->with('success', 'Purchase recorded and inventory updated.');
+
         } catch (\Exception $e) {
-            return back()->withInput()->with('error', 'Error creating purchase: ' . $e->getMessage());
+            DB::rollBack();
+            return back()->with('error', 'Error recording purchase: ' . $e->getMessage())->withInput();
         }
     }
 
     public function show(Purchase $purchase)
     {
-        $purchase->load(['supplier', 'items.product', 'items.serials', 'payments.creator', 'creator']);
+        $purchase->load(['supplier', 'items.product', 'creator']);
         return view('admin.purchases.show', compact('purchase'));
-    }
-
-    public function addPayment(Request $request, Purchase $purchase)
-    {
-        $request->validate([
-            'amount' => 'required|numeric|min:1|max:' . $purchase->due_amount,
-            'payment_date' => 'required|date',
-            'payment_method' => 'required|string',
-            'reference_no' => 'nullable|string',
-            'notes' => 'nullable|string',
-        ]);
-
-        PurchasePayment::create([
-            'purchase_id' => $purchase->id,
-            'supplier_id' => $purchase->supplier_id,
-            'payment_date' => $request->payment_date,
-            'amount' => $request->amount,
-            'payment_method' => $request->payment_method,
-            'reference_no' => $request->reference_no,
-            'notes' => $request->notes,
-            'created_by' => Auth::id(),
-        ]);
-
-        $purchase->paid_amount += $request->amount;
-        $purchase->due_amount = max(0.00, $purchase->grand_total - $purchase->paid_amount);
-        $purchase->payment_status = $purchase->due_amount <= 0 ? 'paid' : 'partial';
-        $purchase->save();
-
-        // Update supplier balance
-        $supplier = $purchase->supplier;
-        $supplier->current_balance = max(0.00, $supplier->current_balance - $request->amount);
-        $supplier->save();
-
-        return back()->with('success', 'Payment of ₹' . number_format($request->amount, 2) . ' recorded successfully.');
     }
 }
