@@ -32,6 +32,7 @@
                         <th>Customer</th>
                         <th>Grand Total</th>
                         <th>Paid</th>
+                        <th>Pending Due</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -41,9 +42,20 @@
                     <tr>
                         <td>{{ $sale->sale_date->format('d M, Y') }}</td>
                         <td class="fw-bold">{{ $sale->invoice_number }}</td>
-                        <td>{{ $sale->customer->name ?? 'Walk-in Customer' }}</td>
+                        <td>
+                            @if($sale->customer)
+                                <a href="{{ route('admin.customers.show', $sale->customer) }}" class="text-decoration-none fw-semibold">
+                                    {{ $sale->customer->name }}
+                                </a>
+                            @else
+                                <span class="text-muted">Walk-in Customer</span>
+                            @endif
+                        </td>
                         <td class="fw-bold text-primary">₹{{ number_format($sale->grand_total, 2) }}</td>
-                        <td class="text-success">₹{{ number_format($sale->paid_amount, 2) }}</td>
+                        <td class="text-success fw-semibold">₹{{ number_format($sale->paid_amount, 2) }}</td>
+                        <td class="{{ $sale->due_amount > 0 ? 'text-danger fw-bold' : 'text-muted' }}">
+                            ₹{{ number_format($sale->due_amount, 2) }}
+                        </td>
                         <td>
                             @if($sale->payment_status == 'paid')
                                 <span class="badge bg-success">Paid</span>
@@ -54,7 +66,20 @@
                             @endif
                         </td>
                         <td>
-                            <a href="{{ route('admin.sales.show', $sale) }}" class="btn btn-sm btn-outline-info"><i class="fa-solid fa-eye"></i> View</a>
+                            <div class="d-flex gap-1">
+                                <a href="{{ route('admin.sales.show', $sale) }}" class="btn btn-sm btn-outline-info" title="View Invoice">
+                                    <i class="fa-solid fa-eye"></i> View
+                                </a>
+                                <button type="button" 
+                                        class="btn btn-sm btn-success text-white" 
+                                        title="Send Invoice on WhatsApp"
+                                        onclick="openWhatsAppModal('{{ $sale->invoice_number }}', '{{ addslashes($sale->customer->name ?? 'Walk-in Customer') }}', '{{ $sale->customer->phone ?? '' }}', '{{ number_format($sale->grand_total, 2) }}', '{{ number_format($sale->paid_amount, 2) }}', '{{ number_format($sale->due_amount, 2) }}', '{{ route('invoice.public', $sale->invoice_number) }}')">
+                                    <i class="fa-brands fa-whatsapp"></i>
+                                </button>
+                                <a href="{{ route('admin.sales.print', $sale) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Print Invoice">
+                                    <i class="fa-solid fa-print"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     @endforeach

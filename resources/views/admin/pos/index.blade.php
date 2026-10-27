@@ -103,7 +103,7 @@
                 <div class="card-header bg-white p-3 border-bottom">
                     <div class="input-group input-group-lg shadow-sm">
                         <span class="input-group-text bg-primary text-white border-primary"><i class="fa-solid fa-barcode"></i></span>
-                        <input type="text" class="form-control border-primary" id="barcodeSearch" placeholder="Scan Barcode or Search Product..." autofocus autocomplete="off">
+                        <input type="text" class="form-control border-primary" id="barcodeSearch" placeholder="Scan Barcode, SKU, or Search Product..." autofocus autocomplete="off">
                     </div>
                 </div>
                 <div class="card-body bg-light products-grid-container p-3">
@@ -112,10 +112,11 @@
                             <div class="col-4 col-md-3 col-xl-3 product-item" 
                                  data-id="{{ $product->id }}" 
                                  data-name="{{ $product->name }}" 
+                                 data-sku="{{ strtolower($product->sku ?? '') }}"
+                                 data-barcode="{{ strtolower($product->barcode ?? '') }}"
                                  data-price="{{ $product->selling_price }}" 
                                  data-stock="{{ $product->stock_quantity }}"
-                                 data-barcode="{{ strtolower($product->barcode) }}"
-                                 data-search="{{ strtolower($product->name) }}">
+                                 data-search="{{ strtolower($product->name . ' ' . ($product->sku ?? '') . ' ' . ($product->barcode ?? '') . ' ' . ($product->model_number ?? '')) }}">
                                 <div class="card h-100 pos-product-card shadow-sm border-0 rounded-3 overflow-hidden" onclick="addToCart({{ $product->id }})">
                                     <div class="bg-white d-flex align-items-center justify-content-center p-2 border-bottom" style="height: 100px;">
                                         @if($product->mainImage)
@@ -126,7 +127,10 @@
                                         @endif
                                     </div>
                                     <div class="card-body p-2 text-center d-flex flex-column justify-content-between">
-                                        <div class="fw-bold small text-truncate mb-1" title="{{ $product->name }}">{{ $product->name }}</div>
+                                        <div class="fw-bold small text-truncate mb-0" title="{{ $product->name }}">{{ $product->name }}</div>
+                                        @if($product->sku)
+                                            <small class="text-muted font-monospace" style="font-size: 0.72rem;">SKU: {{ $product->sku }}</small>
+                                        @endif
                                         <div class="text-primary fw-bold">₹{{ number_format($product->selling_price, 2) }}</div>
                                         <div class="badge bg-{{ $product->stock_quantity > 5 ? 'success' : 'warning' }} mt-1">Stock: {{ $product->stock_quantity }}</div>
                                     </div>
@@ -211,25 +215,102 @@
                         <input type="number" step="0.01" name="grand_total" id="grandTotal" class="form-control form-control-lg pos-summary-input bg-transparent border-0 fw-bold text-primary fs-4 p-0" readonly value="0">
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <label class="form-label pos-summary-label mb-1">Paid Amount (₹)</label>
-                            <input type="number" step="0.01" name="paid_amount" id="paidAmount" class="form-control" value="0" data-auto="true">
+                    <!-- Editable Paid Amount Received & Customer Payment Mode -->
+                    <div class="mb-3 p-3 bg-white rounded-3 border shadow-sm">
+                        <!-- Mode Selector & Header -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label fw-bold mb-0 text-dark">
+                                <i class="fa-solid fa-money-bill-wave text-success me-1"></i> Paid Amount Received (₹)
+                            </label>
+                            <span id="modeStatusBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2 fw-semibold">
+                                <i class="fa-solid fa-bolt me-1"></i> Auto Full
+                            </span>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label pos-summary-label mb-1">Due / Change (₹)</label>
-                            <input type="number" step="0.01" name="due_amount" id="dueAmount" class="form-control bg-light" readonly value="0">
+
+                        <!-- Full (Auto) vs Manual Mode Toggle Buttons -->
+                        <div class="d-flex gap-1 mb-2">
+                            <button type="button" class="btn btn-sm btn-primary active flex-fill fw-semibold py-1" id="btnModeAuto" title="Automatically match paid amount to Grand Total">
+                                <i class="fa-solid fa-bolt me-1"></i> Full (Auto)
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary flex-fill fw-semibold py-1" id="btnModeManual" title="Manually type what customer paid">
+                                <i class="fa-solid fa-pen-to-square me-1"></i> Manual Enter
+                            </button>
+                        </div>
+
+                        <!-- Paid Amount Input Box with Clear / Backspace button -->
+                        <div class="input-group mb-2">
+                            <span class="input-group-text bg-light fw-bold text-dark fs-5">₹</span>
+                            <input type="text" 
+                                   inputmode="decimal" 
+                                   name="paid_amount" 
+                                   id="paidAmount" 
+                                   class="form-control form-control-lg fw-bold text-dark number-only fs-4" 
+                                   placeholder="0.00" 
+                                   value="0"
+                                   autocomplete="off">
+                            <button type="button" class="btn btn-outline-secondary px-3" id="btnClearPaid" title="Clear amount to type manually">
+                                <i class="fa-solid fa-eraser"></i> Clear
+                            </button>
+                        </div>
+
+                        <!-- Quick Cash Denominations / Preset Chips -->
+                        <div class="mb-3">
+                            <div class="small text-muted mb-1 fw-semibold">Quick Amount Presets:</div>
+                            <div class="d-flex flex-wrap gap-1">
+                                <button type="button" class="btn btn-sm btn-outline-success py-1 px-2 fw-semibold quick-amt-btn" data-amt="full">Full</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 quick-amt-btn" data-amt="100">₹100</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 quick-amt-btn" data-amt="200">₹200</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 quick-amt-btn" data-amt="500">₹500</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 quick-amt-btn" data-amt="1000">₹1,000</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 quick-amt-btn" data-amt="2000">₹2,000</button>
+                                <button type="button" class="btn btn-sm btn-outline-warning py-1 px-2 quick-amt-btn" data-amt="half">50%</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 quick-amt-btn" data-amt="zero">Unpaid</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Real-time Balance / Change & Status Display -->
+                        <div class="p-2 rounded-2 border bg-light mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small fw-semibold text-muted" id="balanceLabel">Balance Due</span>
+                                <span class="badge bg-success fs-6" id="paymentStatusBadge">Paid in Full</span>
+                            </div>
+                            <div class="mt-1 d-flex justify-content-between align-items-baseline">
+                                <span class="fs-4 fw-bold text-muted" id="balanceAmountDisplay">₹0.00</span>
+                                <input type="hidden" name="due_amount" id="dueAmount" value="0">
+                            </div>
+                        </div>
+                        
+                        <div id="dueWarningNotice" class="alert alert-warning py-1 px-2 small mb-0 d-none">
+                            <i class="fa-solid fa-triangle-exclamation me-1 text-danger"></i>
+                            <span>Pending customer due! Please select or add a Customer above to track this balance.</span>
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label class="form-label pos-summary-label mb-1">Payment Method</label>
-                        <select name="payment_method" class="form-select">
-                            <option value="Cash">Cash</option>
-                            <option value="Card">Card</option>
-                            <option value="UPI">UPI</option>
-                            <option value="Bank Transfer">Bank Transfer</option>
+                    <!-- How Customer Paid: Payment Method & Notes -->
+                    <div class="mb-3 p-3 bg-light rounded-3 border">
+                        <label class="form-label pos-summary-label mb-1">
+                            <i class="fa-solid fa-credit-card me-1 text-primary"></i> Payment Method (How Customer Paid)
+                        </label>
+                        <select name="payment_method" id="paymentMethodSelect" class="form-select form-select-lg mb-2">
+                            <option value="Cash" selected>💵 Cash</option>
+                            <option value="UPI">📱 UPI / QR (PhonePe / GPay / Paytm)</option>
+                            <option value="Card">💳 Debit / Credit Card</option>
+                            <option value="Bank Transfer">🏦 Bank Transfer / NEFT</option>
+                            <option value="Split">🔄 Split (Cash + UPI / Card)</option>
+                            <option value="Credit / Khata">📑 Customer Credit / Khata (Due)</option>
                         </select>
+                        
+                        <!-- Manual Entry Notes / Ref ID -->
+                        <div>
+                            <label class="form-label small text-muted mb-1">
+                                <i class="fa-solid fa-pen me-1"></i> Payment Notes / Reference ID (Optional)
+                            </label>
+                            <input type="text" 
+                                   name="notes" 
+                                   id="paymentNotes" 
+                                   class="form-control form-control-sm" 
+                                   placeholder="e.g. UPI Ref / UTR No / Split note">
+                        </div>
                     </div>
 
                     <button type="button" id="submitBtn" class="btn btn-primary w-100 py-2 fs-5 fw-bold">
@@ -288,6 +369,28 @@
 <script>
     // Global Cart Object
     let cart = {};
+    let isManualPaid = false;
+
+    function setPaymentMode(manual) {
+        isManualPaid = manual;
+        if (isManualPaid) {
+            $('#btnModeManual').addClass('btn-primary active text-white').removeClass('btn-outline-secondary');
+            $('#btnModeAuto').removeClass('btn-primary active text-white').addClass('btn-outline-secondary');
+            $('#modeStatusBadge')
+                .removeClass('bg-primary-subtle text-primary border-primary-subtle')
+                .addClass('bg-warning-subtle text-dark border-warning-subtle')
+                .html('<i class="fa-solid fa-pen-to-square me-1 text-warning-emphasis"></i> Manual Entry');
+        } else {
+            $('#btnModeAuto').addClass('btn-primary active text-white').removeClass('btn-outline-secondary');
+            $('#btnModeManual').removeClass('btn-primary active text-white').addClass('btn-outline-secondary');
+            $('#modeStatusBadge')
+                .removeClass('bg-warning-subtle text-dark border-warning-subtle')
+                .addClass('bg-primary-subtle text-primary border-primary-subtle')
+                .html('<i class="fa-solid fa-bolt me-1"></i> Auto Full');
+            let gt = parseFloat($('#grandTotal').val()) || 0;
+            $('#paidAmount').val(gt > 0 ? gt.toFixed(2) : '0');
+        }
+    }
 
     function updateClock() {
         var now = new Date();
@@ -303,28 +406,28 @@
             allowClear: true
         });
 
-        // Search Bar functionality (Filter Grid)
+        // Search Bar functionality (Filter Grid & SKU / Barcode Auto Add)
         $('#barcodeSearch').on('input', function() {
             let val = $(this).val().toLowerCase().trim();
             let hasResults = false;
             
             $('.product-item').each(function() {
-                let name = $(this).data('search');
-                let barcode = $(this).data('barcode') ? $(this).data('barcode').toString() : '';
+                let searchTxt = $(this).data('search');
+                let barcode = $(this).data('barcode') ? $(this).data('barcode').toString().toLowerCase() : '';
+                let sku = $(this).data('sku') ? $(this).data('sku').toString().toLowerCase() : '';
                 
-                // Exact Barcode Match triggers instant add to cart
-                if (val !== '' && barcode === val) {
+                // Exact Barcode or Exact SKU Match triggers instant add to cart
+                if (val !== '' && (barcode === val || sku === val)) {
                     addToCart($(this).data('id'));
                     $(this).show();
                     hasResults = true;
-                    // Reset search after adding by barcode
+                    // Reset search after adding by barcode/sku
                     $('#barcodeSearch').val('');
-                    // Recursively filter to reset view
                     $('#barcodeSearch').trigger('input'); 
                     return false; // Break each
                 }
                 
-                if (name.includes(val) || barcode.includes(val)) {
+                if (searchTxt.includes(val) || barcode.includes(val) || sku.includes(val)) {
                     $(this).show();
                     hasResults = true;
                 } else {
@@ -339,12 +442,60 @@
             }
         });
 
+        // Barcode Gun Scanner Enter Key:
+        // Gun scanners send Enter (13) at the end of a scan.
+        $('#barcodeSearch').on('keydown', function(e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.preventDefault();
+                let val = $(this).val().toLowerCase().trim();
+                if (!val) return;
+                
+                let foundId = null;
+                $('.product-item').each(function() {
+                    let barcode = $(this).data('barcode') ? $(this).data('barcode').toString().toLowerCase() : '';
+                    let sku = $(this).data('sku') ? $(this).data('sku').toString().toLowerCase() : '';
+                    if (barcode === val || sku === val) {
+                        foundId = $(this).data('id');
+                        return false;
+                    }
+                });
+                
+                if (!foundId) {
+                    let visible = $('.product-item:visible');
+                    if (visible.length === 1) {
+                        foundId = visible.first().data('id');
+                    }
+                }
+                
+                if (foundId) {
+                    addToCart(foundId);
+                    $(this).val('').trigger('input');
+                }
+            }
+        });
+
         // Form Submit
         $('#submitBtn').click(function() {
             if(Object.keys(cart).length === 0) {
                 alert('Cart is empty!');
                 return;
             }
+            
+            // If cashier left paid amount blank, treat as 0
+            let paidInput = $('#paidAmount');
+            if (paidInput.val().trim() === '') {
+                paidInput.val('0');
+                updateTotalsUI();
+            }
+
+            let due = parseFloat($('#dueAmount').val()) || 0;
+            let customerId = $('.select2-customer').val();
+            if (due > 0 && !customerId) {
+                if (!confirm('This sale has a pending balance of ₹' + due.toFixed(2) + ' but no customer is selected. Do you want to proceed as walk-in credit, or cancel to select a customer? Click OK to proceed anyway.')) {
+                    return;
+                }
+            }
+
             if(!$('#posForm')[0].checkValidity()) {
                 $('#posForm')[0].reportValidity();
                 return;
@@ -352,12 +503,92 @@
             $('#posForm').submit();
         });
 
-        // Listen for discount/tax/paid amount changes
-        $(document).on('input', '#discountInput, #taxInput, #paidAmount', function() {
-            if($(this).attr('id') === 'paidAmount') {
-                $(this).data('auto', false);
+        // Mode Toggles (Auto vs Manual)
+        $('#btnModeAuto').on('click', function() {
+            setPaymentMode(false);
+            updateTotalsUI();
+        });
+
+        $('#btnModeManual').on('click', function() {
+            setPaymentMode(true);
+            $('#paidAmount').focus().select();
+        });
+
+        $('#btnClearPaid').on('click', function() {
+            setPaymentMode(true);
+            $('#paidAmount').val('').focus();
+            updateTotalsUI();
+        });
+
+        // Paid Amount interaction: selecting or typing in box switches to Manual mode cleanly
+        $('#paidAmount').on('focus', function() {
+            setPaymentMode(true);
+            $(this).select();
+        });
+
+        $('#paidAmount').on('input', function() {
+            setPaymentMode(true);
+            updateTotalsUI();
+        });
+
+        $('#paidAmount').on('blur', function() {
+            let val = $(this).val().trim();
+            if (val === '') {
+                $(this).val('0');
+                updateTotalsUI();
+            }
+        });
+
+        // Quick Payment Preset Buttons
+        $('.quick-amt-btn').on('click', function() {
+            let amt = $(this).data('amt');
+            let gt = parseFloat($('#grandTotal').val()) || 0;
+            setPaymentMode(true);
+
+            if (amt === 'full') {
+                $('#paidAmount').val(gt > 0 ? gt.toFixed(2) : '0');
+            } else if (amt === 'half') {
+                $('#paidAmount').val((gt / 2).toFixed(2));
+            } else if (amt === 'zero') {
+                $('#paidAmount').val('0');
+            } else {
+                let num = parseFloat(amt);
+                if (!isNaN(num)) {
+                    $('#paidAmount').val(num.toFixed(2));
+                }
             }
             updateTotalsUI();
+        });
+
+        // Payment Method change updates note placeholder
+        $('#paymentMethodSelect').on('change', function() {
+            let method = $(this).val();
+            let notesInput = $('#paymentNotes');
+            if (method === 'UPI') {
+                notesInput.attr('placeholder', 'Enter UPI UTR / Transaction ID (e.g. 40291...)');
+            } else if (method === 'Split') {
+                notesInput.attr('placeholder', 'e.g. 500 Cash + 500 PhonePe');
+            } else if (method === 'Credit / Khata') {
+                notesInput.attr('placeholder', 'Reason for credit / promised payment date');
+            } else if (method === 'Card') {
+                notesInput.attr('placeholder', 'Card last 4 digits / Approval code');
+            } else {
+                notesInput.attr('placeholder', 'e.g. UPI Ref / UTR No / Split note');
+            }
+        });
+
+        // Listen for discount/tax changes
+        $(document).on('input', '#discountInput, #taxInput', function() {
+            updateTotalsUI();
+        });
+
+        $('.select2-customer').on('change', function() {
+            let due = parseFloat($('#dueAmount').val()) || 0;
+            if (due > 0 && !$(this).val()) {
+                $('#dueWarningNotice').removeClass('d-none');
+            } else {
+                $('#dueWarningNotice').addClass('d-none');
+            }
         });
 
         // Add Customer AJAX Submission
@@ -540,22 +771,54 @@
         if(grandTotal < 0) grandTotal = 0;
         
         $('#grandTotal').val(grandTotal.toFixed(2));
+        $('#mobileGrandTotal').text('₹' + grandTotal.toFixed(2));
 
         let paidInput = $('#paidAmount');
-        let paid = parseFloat(paidInput.val()) || 0;
-        
-        // Auto update paid amount
-        if(paidInput.data('auto') === true || paidInput.val() == 0 || paid === 0 || isNaN(paid)) {
-            paidInput.val(grandTotal.toFixed(2));
-            paidInput.data('auto', true);
-            paid = grandTotal;
+
+        // Only auto-sync with grandTotal if in Auto Full mode
+        if (!isManualPaid) {
+            paidInput.val(grandTotal > 0 ? grandTotal.toFixed(2) : '0');
         }
 
-        let due = grandTotal - paid;
-        if(due < 0) due = 0;
+        // Numerical calculation:
+        // If cashier cleared the text box to type, treat as 0 for live math without overwriting their input text!
+        let rawPaid = paidInput.val().trim();
+        let paid = rawPaid === '' ? 0 : (parseFloat(rawPaid) || 0);
 
-        $('#dueAmount').val(due.toFixed(2));
-        $('#mobileGrandTotal').text('₹' + grandTotal.toFixed(2));
+        let due = grandTotal - paid;
+        let change = 0;
+
+        if (due > 0.001) {
+            // Customer owes balance (Due)
+            $('#balanceLabel').html('<i class="fa-solid fa-triangle-exclamation text-danger me-1"></i> Balance Due (Customer Owes)');
+            $('#balanceAmountDisplay').text('₹' + due.toFixed(2)).removeClass('text-success text-muted').addClass('text-danger');
+            $('#dueAmount').val(due.toFixed(2));
+            if (paid > 0) {
+                $('#paymentStatusBadge').removeClass('bg-success bg-danger text-white').addClass('bg-warning text-dark').text('Partial Paid');
+            } else {
+                $('#paymentStatusBadge').removeClass('bg-success bg-warning text-dark').addClass('bg-danger text-white').text('Unpaid / Credit');
+            }
+            if (!$('.select2-customer').val()) {
+                $('#dueWarningNotice').removeClass('d-none');
+            } else {
+                $('#dueWarningNotice').addClass('d-none');
+            }
+        } else if (paid > grandTotal + 0.001) {
+            // Customer paid extra note (Change Return)
+            change = paid - grandTotal;
+            $('#dueAmount').val('0.00');
+            $('#balanceLabel').html('<i class="fa-solid fa-hand-holding-dollar text-success me-1"></i> Change to Return to Customer');
+            $('#balanceAmountDisplay').text('₹' + change.toFixed(2)).removeClass('text-danger text-muted').addClass('text-success');
+            $('#paymentStatusBadge').removeClass('bg-warning bg-danger text-dark').addClass('bg-success text-white').text('Paid in Full');
+            $('#dueWarningNotice').addClass('d-none');
+        } else {
+            // Paid in full
+            $('#dueAmount').val('0.00');
+            $('#balanceLabel').html('<i class="fa-solid fa-check-circle text-success me-1"></i> Balance Due');
+            $('#balanceAmountDisplay').text('₹0.00').removeClass('text-danger text-success').addClass('text-muted');
+            $('#paymentStatusBadge').removeClass('bg-warning bg-danger text-dark').addClass('bg-success text-white').text('Paid in Full');
+            $('#dueWarningNotice').addClass('d-none');
+        }
     }
 </script>
 @endpush

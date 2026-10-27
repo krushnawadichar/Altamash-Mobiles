@@ -10,8 +10,16 @@ class CustomerController extends Controller
 {
     public function index()
     {
-        $customers = Customer::latest()->get();
+        $customers = Customer::with('sales')->latest('id')->get();
         return view('admin.customers.index', compact('customers'));
+    }
+
+    public function show(Customer $customer)
+    {
+        $customer->load(['sales' => function($q) {
+            $q->latest('id');
+        }]);
+        return view('admin.customers.show', compact('customer'));
     }
 
     public function create()

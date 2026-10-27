@@ -1,176 +1,422 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h2 class="fw-bold">Edit Product: {{ $product->name }}</h2>
-        <a href="{{ route('admin.products.index') }}" class="text-decoration-none"><i class="fa-solid fa-arrow-left me-1"></i> Back to Products</a>
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="fa-solid fa-pen-to-square text-primary me-2"></i>Edit Product: {{ $product->name }}</h2>
+            <p class="text-muted mb-0">Update barcode, pricing, inventory levels, and product details</p>
+        </div>
+        <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to Products
+        </a>
     </div>
-</div>
 
-<form action="{{ route('admin.products.update', $product) }}" method="POST" enctype="multipart/form-data">
-    @csrf
-    @method('PUT')
-    <div class="row">
-        <!-- Main Details -->
-        <div class="col-md-8">
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Basic Information</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label">Product Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" required value="{{ old('name', $product->name) }}">
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">SKU</label>
-                            <input type="text" name="sku" class="form-control" value="{{ old('sku', $product->sku) }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Model Number</label>
-                            <input type="text" name="model_number" class="form-control" value="{{ old('model_number', $product->model_number) }}">
-                        </div>
-                    </div>
+    @if ($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+            <div class="fw-bold mb-1"><i class="fa-solid fa-triangle-exclamation me-1"></i> Please check the form errors:</div>
+            <ul class="mb-0 ps-3">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
 
-                    <div class="mb-3">
-                        <label class="form-label">Short Description</label>
-                        <textarea name="short_description" class="form-control" rows="2">{{ old('short_description', $product->short_description) }}</textarea>
-                    </div>
+    <form action="{{ route('admin.products.update', $product) }}" method="POST" enctype="multipart/form-data" id="productEditForm">
+        @csrf
+        @method('PUT')
 
-                    <div class="mb-3">
-                        <label class="form-label">Detailed Description</label>
-                        <textarea name="description" class="form-control" rows="5">{{ old('description', $product->description) }}</textarea>
-                    </div>
-                </div>
+        <!-- 1. Product & Barcode Information -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-dark">
+                    <i class="fa-solid fa-circle-info text-primary me-2"></i>1. Product &amp; Barcode Information
+                </h5>
             </div>
+            <div class="card-body p-4">
+                
+                <!-- Barcode Input (Scanner Friendly) -->
+                <div class="mb-4 p-3 bg-light rounded border">
+                    <label class="form-label fw-bold text-dark d-flex justify-content-between align-items-center">
+                        <span><i class="fa-solid fa-barcode text-primary me-1"></i> Barcode (Scan with Gun Scanner or Type)</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle small fw-normal">
+                            <i class="fa-solid fa-check me-1"></i>Scanner Ready
+                        </span>
+                    </label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-white text-muted">
+                            <i class="fa-solid fa-barcode fs-4"></i>
+                        </span>
+                        <input type="text" 
+                               name="barcode" 
+                               id="barcode" 
+                               class="form-control" 
+                               placeholder="Scan barcode with gun scanner or enter barcode..." 
+                               value="{{ old('barcode', $product->barcode) }}"
+                               autocomplete="off">
+                        <button type="button" class="btn btn-outline-primary px-3" id="btnGenBarcode" title="Generate random barcode">
+                            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Generate
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary px-3" id="btnClearBarcode" title="Clear">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                        <i class="fa-solid fa-info-circle text-info me-1"></i>
+                        Point your barcode gun scanner and pull trigger. Pressing Enter automatically moves to the Product Name field.
+                    </small>
+                </div>
 
-            <!-- Pricing & Inventory -->
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Pricing & Inventory</h5>
+                <!-- Product Name -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Product Name <span class="text-danger">*</span></label>
+                    <input type="text" 
+                           name="name" 
+                           id="productName"
+                           class="form-control form-control-lg @error('name') is-invalid @enderror" 
+                           placeholder="Enter product name (e.g. iPhone 15 Pro, Samsung Galaxy S24, Vivo V30)" 
+                           value="{{ old('name', $product->name) }}" 
+                           required>
+                    @error('name')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
                 </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Purchase Price</label>
-                            <input type="number" step="0.01" name="purchase_price" class="form-control" value="{{ old('purchase_price', $product->purchase_price) }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Selling Price <span class="text-danger">*</span></label>
-                            <input type="number" step="0.01" name="selling_price" class="form-control" value="{{ old('selling_price', $product->selling_price) }}" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">MRP</label>
-                            <input type="number" step="0.01" name="mrp" class="form-control" value="{{ old('mrp', $product->mrp) }}">
+
+                <!-- Category & Brand -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Category <span class="text-danger">*</span></label>
+                        <select name="category_id" class="form-select form-select-lg @error('category_id') is-invalid @enderror" required>
+                            <option value="">-- Select Category --</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
+                                    {{ $cat->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('category_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Brand</label>
+                        <select name="brand_id" class="form-select form-select-lg">
+                            <option value="">-- Select Brand (Optional) --</option>
+                            @foreach($brands as $brand)
+                                <option value="{{ $brand->id }}" {{ old('brand_id', $product->brand_id) == $brand->id ? 'selected' : '' }}>
+                                    {{ $brand->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <!-- SKU & Model Number -->
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">SKU (Item Code)</label>
+                        <div class="input-group">
+                            <input type="text" 
+                                   name="sku" 
+                                   id="skuInput"
+                                   class="form-control" 
+                                   placeholder="Enter SKU" 
+                                   value="{{ old('sku', $product->sku) }}">
+                            <button type="button" class="btn btn-outline-secondary" id="btnGenSku">
+                                <i class="fa-solid fa-rotate me-1"></i> Auto SKU
+                            </button>
                         </div>
                     </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label">GST / Tax (%)</label>
-                            <input type="number" step="0.01" name="tax" class="form-control" value="{{ old('tax', $product->tax) }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Stock Qty</label>
-                            <input type="number" name="stock_quantity" class="form-control" value="{{ old('stock_quantity', $product->stock_quantity) }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Min Stock Alert</label>
-                            <input type="number" name="min_stock" class="form-control" value="{{ old('min_stock', $product->min_stock) }}">
-                        </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Model Number</label>
+                        <input type="text" 
+                               name="model_number" 
+                               class="form-control" 
+                               placeholder="Enter model number (e.g. A3106, SM-S928B)" 
+                               value="{{ old('model_number', $product->model_number) }}">
                     </div>
                 </div>
+
             </div>
+        </div>
 
-            <!-- Images -->
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Images</h5>
+        <!-- 2. Pricing & Stock -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-dark">
+                    <i class="fa-solid fa-indian-rupee-sign text-success me-2"></i>2. Pricing &amp; Stock
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                
+                <!-- Prices Row -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Purchase Price (Cost)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">₹</span>
+                            <input type="text" 
+                                   inputmode="decimal" 
+                                   name="purchase_price" 
+                                   class="form-control number-only" 
+                                   placeholder="Enter purchase price" 
+                                   value="{{ old('purchase_price', $product->purchase_price) }}">
+                        </div>
+                        <small class="text-muted">Cost price from supplier</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Selling Price (Retail) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-primary text-white">₹</span>
+                            <input type="text" 
+                                   inputmode="decimal" 
+                                   name="selling_price" 
+                                   class="form-control number-only fw-bold @error('selling_price') is-invalid @enderror" 
+                                   placeholder="Enter selling price" 
+                                   value="{{ old('selling_price', $product->selling_price) }}" 
+                                   required>
+                        </div>
+                        <small class="text-muted">Customer retail price</small>
+                        @error('selling_price')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">MRP (Printed on Box)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">₹</span>
+                            <input type="text" 
+                                   inputmode="decimal" 
+                                   name="mrp" 
+                                   class="form-control number-only" 
+                                   placeholder="Enter MRP" 
+                                   value="{{ old('mrp', $product->mrp) }}">
+                        </div>
+                        <small class="text-muted">Maximum Retail Price</small>
+                    </div>
                 </div>
-                <div class="card-body">
+
+                <!-- Stock & Tax Row -->
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Stock Quantity in Hand</label>
+                        <input type="text" 
+                               inputmode="numeric" 
+                               name="stock_quantity" 
+                               class="form-control number-only integer-only" 
+                               placeholder="Enter stock quantity" 
+                               value="{{ old('stock_quantity', $product->stock_quantity) }}">
+                        <small class="text-muted">Current quantity in store</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Low Stock Warning Alert</label>
+                        <input type="text" 
+                               inputmode="numeric" 
+                               name="min_stock" 
+                               class="form-control number-only integer-only" 
+                               placeholder="Enter alert quantity (e.g. 5)" 
+                               value="{{ old('min_stock', $product->min_stock) }}">
+                        <small class="text-muted">Alerts when stock drops to this level</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">GST / Tax (%)</label>
+                        <div class="input-group">
+                            <input type="text" 
+                                   inputmode="decimal" 
+                                   name="tax" 
+                                   class="form-control number-only" 
+                                   placeholder="Enter tax percentage (e.g. 18)" 
+                                   value="{{ old('tax', $product->tax) }}">
+                            <span class="input-group-text bg-light">%</span>
+                        </div>
+                        <small class="text-muted">Applicable GST / Tax rate</small>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 3. Images, Details & Options -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-dark">
+                    <i class="fa-solid fa-images text-info me-2"></i>3. Images &amp; Details
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                
+                <!-- Main Image -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Main Product Image</label>
                     @if($product->mainImage)
-                        <div class="mb-3">
-                            <label class="d-block fw-bold">Current Main Image</label>
-                            <img src="{{ Storage::url($product->mainImage->image) }}" width="150" class="img-thumbnail">
+                        <div class="mb-2 d-flex align-items-center gap-3 p-2 bg-light rounded border">
+                            <img src="{{ str_starts_with($product->mainImage->image, 'http') ? $product->mainImage->image : Storage::url($product->mainImage->image) }}" 
+                                 alt="Current Image" 
+                                 class="img-thumbnail" 
+                                 style="width: 70px; height: 70px; object-fit: cover;">
+                            <div>
+                                <span class="fw-semibold text-dark small d-block">Current Main Image</span>
+                                <small class="text-muted">Choose a new file below if you want to replace this image</small>
+                            </div>
                         </div>
                     @endif
-                    <div class="mb-3">
-                        <label class="form-label">Update Main Image</label>
-                        <input type="file" name="main_image" class="form-control" accept="image/*">
-                    </div>
-                    <hr>
-                    <div class="mb-3">
-                        <label class="form-label">Add Gallery Images</label>
-                        <input type="file" name="gallery_images[]" class="form-control" accept="image/*" multiple>
+                    <input type="file" 
+                           name="main_image" 
+                           id="mainImage" 
+                           class="form-control" 
+                           accept="image/*"
+                           onchange="previewMainImage(this)">
+                    <div id="mainImagePreviewBox" class="mt-2 d-none">
+                        <img id="mainImagePreview" src="" alt="New Preview" class="img-thumbnail" style="max-height: 100px;">
                     </div>
                 </div>
+
+                <!-- Gallery Images -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Gallery Images (Multiple)</label>
+                    @if($product->images && $product->images->where('is_main', false)->count() > 0)
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            @foreach($product->images->where('is_main', false) as $gImg)
+                                <img src="{{ str_starts_with($gImg->image, 'http') ? $gImg->image : Storage::url($gImg->image) }}" 
+                                     alt="Gallery" 
+                                     class="img-thumbnail" 
+                                     style="width: 60px; height: 60px; object-fit: cover;">
+                            @endforeach
+                        </div>
+                    @endif
+                    <input type="file" 
+                           name="gallery_images[]" 
+                           class="form-control" 
+                           accept="image/*" 
+                           multiple>
+                    <small class="text-muted">Upload additional product photos (optional)</small>
+                </div>
+
+                <!-- Warranty -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Warranty Period</label>
+                    <input type="text" 
+                           name="warranty_period" 
+                           class="form-control" 
+                           placeholder="Enter warranty (e.g. 1 Year Brand Warranty, 6 Months)" 
+                           value="{{ old('warranty_period', $product->warranty_period) }}">
+                </div>
+
+                <!-- Descriptions -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Short Description</label>
+                    <textarea name="short_description" 
+                              class="form-control" 
+                              rows="2" 
+                              placeholder="Enter short description or key highlights...">{{ old('short_description', $product->short_description) }}</textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Detailed Description</label>
+                    <textarea name="description" 
+                              class="form-control" 
+                              rows="3" 
+                              placeholder="Enter detailed product description...">{{ old('description', $product->description) }}</textarea>
+                </div>
+
+                <!-- Options / Flags -->
+                <label class="form-label fw-bold d-block mb-2">Product Options:</label>
+                <div class="row g-3 p-3 bg-light rounded border">
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="status" value="1" class="form-check-input" id="optStatus" {{ old('status', $product->status) ? 'checked' : '' }}>
+                            <label class="form-check-label fw-semibold" for="optStatus">Active Product</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="featured" value="1" class="form-check-input" id="optFeatured" {{ old('featured', $product->featured) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="optFeatured">Featured Product</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="new_arrival" value="1" class="form-check-input" id="optNew" {{ old('new_arrival', $product->new_arrival) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="optNew">New Arrival</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="requires_serial" value="1" class="form-check-input" id="optSerial" {{ old('requires_serial', $product->requires_serial) ? 'checked' : '' }}>
+                            <label class="form-check-label fw-bold text-primary" for="optSerial">
+                                <i class="fa-solid fa-mobile-screen-button me-1"></i> IMEI/Serial Tracking
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
-        <!-- Sidebar -->
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Organization</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label">Category <span class="text-danger">*</span></label>
-                        <select name="category_id" class="form-select" required>
-                            <option value="">Select Category</option>
-                            @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Brand</label>
-                        <select name="brand_id" class="form-select">
-                            <option value="">Select Brand</option>
-                            @foreach($brands as $brand)
-                                <option value="{{ $brand->id }}" {{ old('brand_id', $product->brand_id) == $brand->id ? 'selected' : '' }}>{{ $brand->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
+        <!-- 4. Action Buttons Below the Form -->
+        <div class="card shadow-sm border-0 mb-5">
+            <div class="card-body p-4 d-flex flex-wrap gap-3 align-items-center justify-content-between">
+                <button type="submit" class="btn btn-primary btn-lg px-5 fw-semibold" id="btnUpdateSubmit">
+                    <i class="fa-solid fa-check me-2"></i> Update Product
+                </button>
+                <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary btn-lg px-4">
+                    <i class="fa-solid fa-xmark me-1"></i> Cancel Changes
+                </a>
             </div>
-
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Product Options</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-2 form-check">
-                        <input type="checkbox" name="status" value="1" class="form-check-input" {{ old('status', $product->status) ? 'checked' : '' }}>
-                        <label class="form-check-label">Active</label>
-                    </div>
-                    <div class="mb-2 form-check">
-                        <input type="checkbox" name="featured" value="1" class="form-check-input" {{ old('featured', $product->featured) ? 'checked' : '' }}>
-                        <label class="form-check-label">Featured Product</label>
-                    </div>
-                    <div class="mb-2 form-check">
-                        <input type="checkbox" name="new_arrival" value="1" class="form-check-input" {{ old('new_arrival', $product->new_arrival) ? 'checked' : '' }}>
-                        <label class="form-check-label">New Arrival</label>
-                    </div>
-                    <div class="mb-2 form-check">
-                        <input type="checkbox" name="best_seller" value="1" class="form-check-input" {{ old('best_seller', $product->best_seller) ? 'checked' : '' }}>
-                        <label class="form-check-label">Best Seller</label>
-                    </div>
-                    <hr>
-                    <div class="mb-2 form-check">
-                        <input type="checkbox" name="requires_serial" value="1" class="form-check-input" {{ old('requires_serial', $product->requires_serial) ? 'checked' : '' }}>
-                        <label class="form-check-label text-primary fw-bold"><i class="fa-solid fa-barcode"></i> Requires IMEI/Serial Tracking</label>
-                    </div>
-                </div>
-            </div>
-
-            <button type="submit" class="btn btn-primary w-100 py-2 fs-5">Update Product</button>
         </div>
-    </div>
-</form>
+
+    </form>
+</div>
+
+@push('scripts')
+<script>
+    function previewMainImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                $('#mainImagePreview').attr('src', e.target.result);
+                $('#mainImagePreviewBox').removeClass('d-none');
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    $(document).ready(function() {
+        $('#barcode').on('keydown', function(e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.preventDefault();
+                $('#productName').focus().select();
+            }
+        });
+
+        $('#btnGenBarcode').on('click', function() {
+            const randomBarcode = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+            $('#barcode').val(randomBarcode);
+            $('#productName').focus();
+        });
+
+        $('#btnClearBarcode').on('click', function() {
+            $('#barcode').val('').focus();
+        });
+
+        $('#btnGenSku').on('click', function() {
+            const name = $('#productName').val().trim();
+            let prefix = 'SKU';
+            if (name.length >= 3) {
+                prefix = name.substring(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (prefix.length < 3) prefix = 'SKU';
+            }
+            const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+            $('#skuInput').val(prefix + '-' + rand);
+        });
+
+        $('#productEditForm').on('submit', function() {
+            $('#btnUpdateSubmit').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Updating...');
+        });
+    });
+</script>
+@endpush
 @endsection
-
-

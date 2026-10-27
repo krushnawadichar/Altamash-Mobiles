@@ -283,8 +283,63 @@
                     }
                 });
             }
+
+            // =========================================================================
+            // Common Number-Only Input Restriction Handler (.number-only / .decimal-only)
+            // Allows users to use type="text" while strictly enforcing numbers/decimals
+            // =========================================================================
+            $(document).on('input', '.number-only, .decimal-only', function () {
+                let val = this.value;
+                if ($(this).hasClass('integer-only') || $(this).data('type') === 'integer') {
+                    // Integer only (no decimals)
+                    this.value = val.replace(/[^0-9]/g, '');
+                } else {
+                    // Decimal allowed: allow digits and at most one decimal point
+                    val = val.replace(/[^0-9.]/g, '');
+                    const parts = val.split('.');
+                    if (parts.length > 2) {
+                        val = parts[0] + '.' + parts.slice(1).join('');
+                    }
+                    this.value = val;
+                }
+            });
+
+            $(document).on('keypress', '.number-only, .decimal-only', function (e) {
+                const charCode = (e.which) ? e.which : e.keyCode;
+                // Allow decimal point '.' if not integer-only and not already entered
+                if (charCode === 46) {
+                    if ($(this).hasClass('integer-only') || $(this).data('type') === 'integer') {
+                        return false;
+                    }
+                    if ($(this).val().indexOf('.') !== -1) {
+                        return false;
+                    }
+                    return true;
+                }
+                // Allow only numbers 0-9 (charCode 48 to 57)
+                if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+                    return false;
+                }
+                return true;
+            });
+
+            $(document).on('paste', '.number-only, .decimal-only', function (e) {
+                const pastedData = (e.originalEvent || e).clipboardData.getData('text');
+                const isInteger = $(this).hasClass('integer-only') || $(this).data('type') === 'integer';
+                const clean = isInteger ? pastedData.replace(/[^0-9]/g, '') : pastedData.replace(/[^0-9.]/g, '');
+                if (pastedData !== clean) {
+                    e.preventDefault();
+                    let finalVal = clean;
+                    if (!isInteger && finalVal.split('.').length > 2) {
+                        const parts = finalVal.split('.');
+                        finalVal = parts[0] + '.' + parts.slice(1).join('');
+                    }
+                    document.execCommand('insertText', false, finalVal);
+                }
+            });
         });
     </script>
+    @include('components.whatsapp-invoice-modal')
     @stack('scripts')
 </body>
 </html>

@@ -190,7 +190,7 @@
                 <div class="col-lg-4 col-md-6">
                     <h5 class="d-flex align-items-center mb-3">
                         <img src="{{ asset('build/assets/logos/altmash-logo.jpeg') }}" alt="ALTAMASH MOBILE Logo" style="height: 65px; object-fit: contain;" class="me-2">
-                    </h5>
+`                    </h5>
                     <p class="mt-3 pe-md-4">Your ultimate destination for premium electronics, mobile devices, and expert repair services. Quality guaranteed since 2026.</p>
                     <div class="d-flex gap-3 mt-4">
                         <a href="#" class="text-white fs-5 bg-white bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center hover-scale" style="width: 40px; height: 40px;"><i class="fa-brands fa-facebook-f"></i></a>

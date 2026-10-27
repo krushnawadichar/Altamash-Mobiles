@@ -33,10 +33,15 @@ class PosController extends Controller
         DB::beginTransaction();
 
         try {
+            $grand_total = (float)$request->grand_total;
+            $paid_amount = (float)$request->paid_amount;
+            $effective_paid = min($grand_total, $paid_amount);
+            $due_amount = max(0, $grand_total - $paid_amount);
+
             $payment_status = 'unpaid';
-            if ($request->paid_amount >= $request->grand_total) {
+            if ($due_amount <= 0) {
                 $payment_status = 'paid';
-            } elseif ($request->paid_amount > 0) {
+            } elseif ($paid_amount > 0) {
                 $payment_status = 'partial';
             }
 
@@ -47,14 +52,15 @@ class PosController extends Controller
                 'customer_id' => $request->customer_id,
                 'invoice_number' => $invoiceNumber,
                 'sale_date' => now()->toDateString(),
-                'subtotal' => $request->subtotal,
-                'tax' => $request->tax,
-                'discount' => $request->discount,
-                'grand_total' => $request->grand_total,
-                'paid_amount' => $request->paid_amount,
-                'due_amount' => $request->due_amount,
+                'subtotal' => (float)$request->subtotal,
+                'tax' => (float)$request->tax,
+                'discount' => (float)$request->discount,
+                'grand_total' => $grand_total,
+                'paid_amount' => $effective_paid,
+                'due_amount' => $due_amount,
                 'payment_method' => $request->payment_method,
                 'payment_status' => $payment_status,
+                'notes' => $request->notes,
                 'created_by' => auth()->id()
             ]);
 

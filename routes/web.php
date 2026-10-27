@@ -36,6 +36,10 @@ Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
 Route::post('/checkout', [CheckoutController::class, 'process'])->name('checkout.process');
 Route::get('/checkout/success', [CheckoutController::class, 'success'])->name('checkout.success');
 
+// Public Customer Invoice Viewing & Download (WhatsApp link)
+Route::get('/invoice/{invoice_number}', [SaleController::class, 'publicInvoice'])->name('invoice.public');
+Route::get('/invoice/{invoice_number}/print', [SaleController::class, 'publicPrint'])->name('invoice.public-print');
+
 use App\Http\Controllers\CustomerDashboardController;
 
 Route::get('/dashboard', [CustomerDashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
@@ -51,16 +55,18 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     
     Route::resource('brands', BrandController::class)->except(['show']);
     Route::resource('categories', CategoryController::class)->except(['show']);
-    Route::resource('products', ProductController::class)->except(['show']);
+    Route::get('products/check-barcode', [ProductController::class, 'checkBarcode'])->name('products.check-barcode');
+    Route::resource('products', ProductController::class);
     
     Route::resource('suppliers', SupplierController::class)->except(['show']);
     Route::resource('purchases', PurchaseController::class)->only(['index', 'create', 'store', 'show']);
     
     Route::get('inventory', [InventoryTransactionController::class, 'index'])->name('inventory.index');
 
-    Route::resource('customers', CustomerController::class)->except(['show']);
+    Route::resource('customers', CustomerController::class);
     Route::resource('sales', SaleController::class)->only(['index', 'show']);
     Route::get('sales/{sale}/print', [SaleController::class, 'print'])->name('sales.print');
+    Route::post('sales/{sale}/pay-due', [SaleController::class, 'recordPayment'])->name('sales.pay-due');
     
     Route::get('pos', [PosController::class, 'index'])->name('pos.index');
     Route::post('pos', [PosController::class, 'store'])->name('pos.store');
