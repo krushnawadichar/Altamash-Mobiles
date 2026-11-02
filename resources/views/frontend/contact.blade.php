@@ -38,7 +38,7 @@
                 </div>
                 <div>
                     <h5 class="fw-bold mb-1">Phone Number</h5>
-                    <p class="text-muted mb-0">8956586537<br>+91 9123456789</p>
+                    <p class="text-muted mb-0">9226087986<br>+91 9123456789</p>
                 </div>
             </div>
 

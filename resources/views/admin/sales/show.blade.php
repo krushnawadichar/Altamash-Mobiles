@@ -80,7 +80,7 @@
                 <h2 class="fw-bold text-primary mb-1">{{ config('app.name', 'ALTAMASH MOBILE') }}</h2>
                 <p class="text-muted mb-0">New narsala road, opposite Dhanashree apartment</p>
                 <p class="text-muted mb-0">Narsala, Nagpur, Maharashtra, 440034.</p>
-                <p class="text-muted">Phone: 8956586537</p>
+                <p class="text-muted">Phone: 9226087986</p>
             </div>
             <div class="col-md-6 text-md-end">
                 <h1 class="fw-bold text-uppercase text-muted">Invoice</h1>

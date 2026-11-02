@@ -149,7 +149,7 @@
                     <button onclick="window.print()" class="btn btn-primary btn-sm fw-bold px-3">
                         <i class="fa-solid fa-file-arrow-down me-1"></i> Download / Print PDF
                     </button>
-                    <a href="https://wa.me/918956586537?text={{ urlencode('Hi Altamash Mobiles, I have a query regarding my invoice #' . $sale->invoice_number) }}" 
+                    <a href="https://wa.me/919226087986?text={{ urlencode('Hi Altamash Mobiles, I have a query regarding my invoice #' . $sale->invoice_number) }}" 
                        target="_blank" 
                        class="btn btn-success btn-sm fw-semibold px-3">
                         <i class="fa-brands fa-whatsapp me-1"></i> WhatsApp Shop
@@ -173,7 +173,7 @@
                         Narsala, Nagpur, Maharashtra - 440034.
                     </p>
                     <p class="text-muted small mb-0">
-                        <i class="fa-solid fa-phone me-1 text-success"></i> +91 8956586537 &nbsp;|&nbsp; 
+                        <i class="fa-solid fa-phone me-1 text-success"></i> +91 9226087986 &nbsp;|&nbsp; 
                         <i class="fa-solid fa-envelope me-1 text-primary"></i> support@altamashmobiles.com
                     </p>
                 </div>

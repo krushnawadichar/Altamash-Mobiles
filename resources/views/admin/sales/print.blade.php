@@ -99,7 +99,7 @@
                 <h2 class="fw-bolder mb-1 text-dark">ALTAMASH MOBILE</h2>
                 <p class="text-muted mb-0">New narsala road, <br>opposite Dhanashree apartment</p>
                 <p class="text-muted mb-0">Narsala, Nagpur, Maharashtra, 440034.</p>
-                <p class="text-muted mb-0">Phone: 8956586537</p>
+                <p class="text-muted mb-0">Phone: 9226087986</p>
                 <p class="text-muted mb-0">Email: info@ALTAMASH MOBILE.com</p>
             </div>
             <div class="col-6 text-end">

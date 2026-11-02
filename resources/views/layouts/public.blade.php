@@ -135,7 +135,7 @@
     <!-- Topbar -->
     <div class="bg-dark text-white py-2 text-center text-md-start">
         <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center">
-            <small><i class="fa-solid fa-phone me-2"></i> 8956586537 &nbsp;|&nbsp; <i class="fa-solid fa-envelope me-2"></i> Altamashmobiles01@gmail.com</small>
+            <small><i class="fa-solid fa-phone me-2"></i> 9226087986 &nbsp;|&nbsp; <i class="fa-solid fa-envelope me-2"></i> Altamashmobiles01@gmail.com</small>
             <small class="mt-2 mt-md-0">Free Shipping on orders over ₹10,000</small>
         </div>
     </div>
@@ -220,7 +220,7 @@
                     <h5>Store Info</h5>
                     <ul class="list-unstyled d-flex flex-column gap-2">
                         <li><i class="fa-solid fa-location-dot me-2"></i> New narsala road, <br>opposite Dhanashree apartment, Narsala, Nagpur, Maharashtra, 440034.</li>
-                        <li><i class="fa-solid fa-phone me-2"></i> 8956586537</li>
+                        <li><i class="fa-solid fa-phone me-2"></i> 9226087986</li>
                         <li><i class="fa-solid fa-envelope me-2"></i> Altamashmobiles01@gmail.com</li>
                         <li><i class="fa-solid fa-clock me-2"></i> Mon - Sun: 10:00 AM - 9:00 PM</li>
                     </ul>

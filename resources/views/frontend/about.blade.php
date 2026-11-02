@@ -120,7 +120,7 @@
                         <i class="fa-solid fa-phone fs-4 text-primary mt-1"></i>
                         <div>
                             <h5 class="fw-bold mb-1">Contact Us</h5>
-                            <p class="text-muted m-0">8956586537<br>Altamashmobiles01@gmail.com</p>
+                            <p class="text-muted m-0">9226087986<br>Altamashmobiles01@gmail.com</p>
                         </div>
                     </li>
                 </ul>

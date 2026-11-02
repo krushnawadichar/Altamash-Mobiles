@@ -163,7 +163,7 @@
         msg += `\n📥 *View & Download Invoice:* \n${fullUrl}\n\n`;
         msg += `📍 *Altamash Mobiles*\n`;
         msg += `New Narsala Road, Opp. Dhanashree Apartment, Nagpur\n`;
-        msg += `📞 +91 8956586537`;
+        msg += `📞 +91 9226087986`;
 
         $('#waMessageText').val(msg);
 

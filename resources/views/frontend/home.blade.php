@@ -296,7 +296,7 @@
                     </div>
                     <div>
                         <h5 class="fw-bold mb-1">Call Us</h5>
-                        <p class="text-muted m-0">8956586537</p>
+                        <p class="text-muted m-0">9226087986</p>
                     </div>
                 </div>
                 
