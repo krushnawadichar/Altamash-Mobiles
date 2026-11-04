@@ -67,32 +67,33 @@
         <div class="col-lg-7">
             <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5">
                 <h3 class="fw-bold mb-4">Send us a Message</h3>
-                <form action="#" method="POST" onsubmit="event.preventDefault(); alert('Thank you for your message! We will get back to you soon.');">
+                <form action="{{ route('contact.submit') }}" method="POST">
+                    @csrf
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Your Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" required placeholder="John Doe">
+                            <input type="text" name="name" class="form-control" value="{{ old('name', auth()->user()?->name) }}" required placeholder="John Doe">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Your Email <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" required placeholder="john@example.com">
+                            <input type="email" name="email" class="form-control" value="{{ old('email', auth()->user()?->email) }}" required placeholder="john@example.com">
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Subject <span class="text-danger">*</span></label>
-                        <select class="form-select" required>
+                        <select class="form-select" name="subject" required>
                             <option value="">Select a subject...</option>
-                            <option value="General Inquiry">General Inquiry</option>
-                            <option value="Product Question">Product Question</option>
-                            <option value="Repair Service">Repair Service</option>
-                            <option value="Order Status">Order Status</option>
+                            <option value="General Inquiry" {{ old('subject') == 'General Inquiry' ? 'selected' : '' }}>General Inquiry</option>
+                            <option value="Product Question" {{ old('subject') == 'Product Question' ? 'selected' : '' }}>Product Question</option>
+                            <option value="Repair Service" {{ old('subject') == 'Repair Service' ? 'selected' : '' }}>Repair Service</option>
+                            <option value="Order Status" {{ old('subject') == 'Order Status' ? 'selected' : '' }}>Order Status</option>
                         </select>
                     </div>
                     <div class="mb-4">
                         <label class="form-label">Message <span class="text-danger">*</span></label>
-                        <textarea class="form-control" rows="5" required placeholder="How can we help you?"></textarea>
+                        <textarea class="form-control" name="message" rows="5" required placeholder="How can we help you?">{{ old('message') }}</textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary-custom btn-lg w-100 fw-bold py-3">Send Message</button>
+                    <button type="submit" class="btn btn-primary-custom btn-lg w-100 fw-bold py-3"><i class="fa-solid fa-paper-plane me-2"></i> Send Message</button>
                 </form>
             </div>
         </div>

@@ -20,12 +20,17 @@ class FrontendController extends Controller
     {
         $query = Product::with(['images', 'category', 'brand', 'mainImage'])->where('status', 1);
 
-        if ($request->has('q') && $request->q != '') {
-            $query->where('name', 'like', '%' . $request->q . '%')
-                  ->orWhere('description', 'like', '%' . $request->q . '%');
+        if ($request->filled('q')) {
+            $search = trim($request->q);
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('description', 'like', '%' . $search . '%')
+                  ->orWhere('sku', 'like', '%' . $search . '%')
+                  ->orWhere('model_number', 'like', '%' . $search . '%');
+            });
         }
 
-        if ($request->has('category') && $request->category != '') {
+        if ($request->filled('category')) {
             $query->where('category_id', $request->category);
         }
 
@@ -63,5 +68,20 @@ class FrontendController extends Controller
     public function contact()
     {
         return view('frontend.contact');
+    }
+
+    public function contactSubmit(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'subject' => 'nullable|string|max:255',
+            'message' => 'required|string|max:2000',
+        ]);
+
+        \Illuminate\Support\Facades\Log::info('New customer contact message:', $validated);
+
+        return back()->with('success', 'Thank you, ' . $validated['name'] . '! Your message has been sent successfully. Our team will contact you shortly.');
     }
 }

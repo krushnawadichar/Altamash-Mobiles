@@ -33,7 +33,7 @@ class CheckoutController extends Controller
     {
         $cart = session()->get('cart', []);
         if (empty($cart)) {
-            return redirect()->route('shop');
+            return redirect()->route('shop')->with('error', 'Your cart is empty.');
         }
 
         $request->validate([
@@ -41,38 +41,63 @@ class CheckoutController extends Controller
             'phone' => 'required|string|max:20',
             'email' => 'required|email|max:255',
             'address' => 'required|string',
-            'city' => 'required|string',
-            'state' => 'required|string',
-            'payment_method' => 'required|string' // COD or Razorpay
+            'city' => 'required|string|max:100',
+            'state' => 'required|string|max:100',
+            'payment_method' => 'required|string'
         ]);
+
+        // Pre-check stock for all cart items before proceeding
+        foreach ($cart as $id => $item) {
+            $product = Product::find($id);
+            if (!$product || $product->stock_quantity < $item['quantity']) {
+                $avail = $product ? $product->stock_quantity : 0;
+                $name = $product ? $product->name : ($item['name'] ?? 'Item');
+                return redirect()->route('cart.index')->with('error', "Sorry, \"{$name}\" only has {$avail} unit(s) remaining in stock. Please adjust your cart.");
+            }
+        }
 
         DB::beginTransaction();
 
         try {
-            // Find or create customer
-            $customer = Customer::firstOrCreate(
-                ['phone' => $request->phone],
-                [
+            // Find customer by phone or email
+            $customer = Customer::where('phone', $request->phone)
+                                ->orWhere('email', $request->email)
+                                ->first();
+
+            if (!$customer) {
+                $customer = Customer::create([
                     'name' => $request->name,
+                    'phone' => $request->phone,
                     'email' => $request->email,
                     'address' => $request->address,
                     'city' => $request->city,
                     'state' => $request->state,
-                ]
-            );
+                    'status' => true,
+                ]);
+            } else {
+                $customer->update(array_filter([
+                    'name' => $customer->name ?: $request->name,
+                    'email' => $customer->email ?: $request->email,
+                    'phone' => $customer->phone ?: $request->phone,
+                    'address' => $customer->address ?: $request->address,
+                    'city' => $customer->city ?: $request->city,
+                    'state' => $customer->state ?: $request->state,
+                ]));
+            }
 
             // Calculate totals
             $subtotal = 0;
-            foreach($cart as $item) {
+            foreach ($cart as $item) {
                 $subtotal += $item['price'] * $item['quantity'];
             }
             $tax = 0;
             $discount = 0;
             $grand_total = $subtotal + $tax - $discount;
             
-            $payment_status = $request->payment_method === 'Razorpay' ? 'paid' : 'unpaid';
-            $paid_amount = $request->payment_method === 'Razorpay' ? $grand_total : 0;
-            $due_amount = $request->payment_method === 'Razorpay' ? 0 : $grand_total;
+            $isPaidOnline = str_contains(strtolower($request->payment_method), 'razorpay') || $request->has('razorpay_payment_id');
+            $payment_status = $isPaidOnline ? 'paid' : 'unpaid';
+            $paid_amount = $isPaidOnline ? $grand_total : 0;
+            $due_amount = $isPaidOnline ? 0 : $grand_total;
 
             $invoiceNumber = 'ONL-' . strtoupper(Str::random(6)) . '-' . time();
 
@@ -89,7 +114,8 @@ class CheckoutController extends Controller
                 'due_amount' => $due_amount,
                 'payment_method' => $request->payment_method,
                 'payment_status' => $payment_status,
-                'notes' => 'Online Order via E-Commerce',
+                'notes' => 'Online Order via E-Commerce Store' . ($request->filled('razorpay_payment_id') ? ' (Razorpay ID: ' . $request->razorpay_payment_id . ')' : ''),
+                'created_by' => auth()->id()
             ]);
 
             foreach ($cart as $id => $item) {
@@ -101,14 +127,14 @@ class CheckoutController extends Controller
                     'subtotal' => $item['price'] * $item['quantity']
                 ]);
 
-                // Update stock
+                // Update stock safely
                 $product = Product::find($id);
                 if ($product) {
                     $prevStock = $product->stock_quantity;
-                    $newStock = $prevStock - $item['quantity'];
+                    $newStock = max(0, $prevStock - $item['quantity']);
                     $product->update(['stock_quantity' => $newStock]);
 
-                    // Log inventory
+                    // Log inventory transaction
                     InventoryTransaction::create([
                         'product_id' => $id,
                         'transaction_type' => 'sale',
@@ -116,6 +142,7 @@ class CheckoutController extends Controller
                         'previous_stock' => $prevStock,
                         'new_stock' => $newStock,
                         'reference' => 'Online Order #' . $sale->invoice_number,
+                        'user_id' => auth()->id()
                     ]);
                 }
             }
@@ -130,16 +157,19 @@ class CheckoutController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Checkout Error: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
+            \Illuminate\Support\Facades\Log::error('Checkout Error: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
             return back()->with('error', 'Error processing order: ' . $e->getMessage())->withInput();
         }
     }
 
     public function success()
     {
-        if(!session('invoice_number')){
+        $invoiceNumber = session('invoice_number');
+        if (!$invoiceNumber) {
             return redirect()->route('home');
         }
-        return view('frontend.checkout_success');
+
+        $sale = Sale::with(['customer', 'items.product'])->where('invoice_number', $invoiceNumber)->first();
+        return view('frontend.checkout_success', compact('sale', 'invoiceNumber'));
     }
 }

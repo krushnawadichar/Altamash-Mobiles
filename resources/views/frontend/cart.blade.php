@@ -46,10 +46,10 @@
                                         <td class="ps-4">
                                             <div class="d-flex align-items-center gap-3">
                                                 @if($details['image'])
-                                                    <img src="{{ asset('storage/' . $details['image']) }}" alt="{{ $details['name'] }}" style="width: 60px; height: 60px; object-fit: cover;" class="rounded">
+                                                    <img src="{{ str_starts_with($details['image'], 'http') ? $details['image'] : asset('storage/' . $details['image']) }}" alt="{{ $details['name'] }}" style="width: 60px; height: 60px; object-fit: contain;" class="rounded border p-1 bg-white">
                                                 @else
-                                                    <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                                        <i class="fa-solid fa-image text-muted"></i>
+                                                    <div class="bg-light rounded d-flex align-items-center justify-content-center border" style="width: 60px; height: 60px;">
+                                                        <i class="fa-solid fa-mobile-screen text-muted fs-4"></i>
                                                     </div>
                                                 @endif
                                                 <h6 class="mb-0 fw-bold">{{ $details['name'] }}</h6>

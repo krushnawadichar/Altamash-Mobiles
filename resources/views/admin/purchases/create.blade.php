@@ -61,13 +61,13 @@
                                 <select name="products[]" class="form-select product-select" required>
                                     <option value="">Select Product</option>
                                     @foreach($products as $product)
-                                        <option value="{{ $product->id }}">{{ $product->name }}</option>
+                                        <option value="{{ $product->id }}" data-price="{{ $product->purchase_price ?? 0 }}">{{ $product->name }} (Cost: ₹{{ number_format($product->purchase_price ?? 0, 2) }})</option>
                                     @endforeach
                                 </select>
                             </td>
                             <td><input type="number" step="0.01" name="prices[]" class="form-control price-input" value="0" required></td>
-                            <td><input type="number" name="quantities[]" class="form-control qty-input" value="1" required></td>
-                            <td><input type="text" class="form-control subtotal-input" readonly value="0"></td>
+                            <td><input type="number" name="quantities[]" class="form-control qty-input" value="1" min="1" required></td>
+                            <td><input type="text" class="form-control subtotal-input" readonly value="0.00"></td>
                             <td class="text-center"><button type="button" class="btn btn-sm btn-danger remove-row"><i class="fa-solid fa-trash"></i></button></td>
                         </tr>
                     </tbody>
@@ -79,10 +79,25 @@
     <div class="row">
         <div class="col-md-6">
             <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Payment & Additional Notes</h5>
+                </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <textarea name="notes" class="form-control" rows="4"></textarea>
+                        <label class="form-label fw-semibold">Initial Payment Method</label>
+                        <select name="payment_method" class="form-select">
+                            <option value="Cash">Cash</option>
+                            <option value="UPI" selected>UPI (GPay / PhonePe / Paytm)</option>
+                            <option value="Bank Transfer">Bank Transfer (NEFT/IMPS)</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Credit Card">Credit Card</option>
+                            <option value="Due / Credit">Unpaid / Supplier Credit</option>
+                        </select>
+                        <small class="text-muted">Method used for the initial paid amount</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Internal Notes / Payment Reference</label>
+                        <textarea name="notes" class="form-control" rows="4" placeholder="Add invoice terms, UTR numbers, or delivery notes..."></textarea>
                     </div>
                 </div>
             </div>
@@ -99,7 +114,7 @@
                         <div class="col-6"><input type="number" step="0.01" name="discount" id="discountInput" class="form-control form-control-sm" value="0"></div>
                     </div>
                     <div class="row mb-2">
-                        <div class="col-6 text-end fw-bold">Tax:</div>
+                        <div class="col-6 text-end fw-bold">Tax / GST:</div>
                         <div class="col-6"><input type="number" step="0.01" name="tax" id="taxInput" class="form-control form-control-sm" value="0"></div>
                     </div>
                     <div class="row mb-2">
@@ -109,15 +124,23 @@
                     <hr>
                     <div class="row mb-2">
                         <div class="col-6 text-end fw-bold text-success">Paid Amount:</div>
-                        <div class="col-6"><input type="number" step="0.01" name="paid_amount" id="paidAmount" class="form-control form-control-sm border-success" value="0"></div>
+                        <div class="col-6">
+                            <input type="number" step="0.01" name="paid_amount" id="paidAmount" class="form-control form-control-sm border-success fw-bold" value="0">
+                            <div class="d-flex gap-1 mt-1 justify-content-end">
+                                <button type="button" class="btn btn-xs btn-outline-success py-0 px-2" id="btnPayFull">Full</button>
+                                <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2" id="btnPayZero">Zero Due</button>
+                            </div>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-6 text-end fw-bold text-danger">Due Amount:</div>
-                        <div class="col-6"><input type="number" step="0.01" name="due_amount" id="dueAmount" class="form-control form-control-sm border-danger" readonly value="0"></div>
+                        <div class="col-6"><input type="number" step="0.01" name="due_amount" id="dueAmount" class="form-control form-control-sm border-danger fw-bold" readonly value="0"></div>
                     </div>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary w-100 py-3 fs-5 fw-bold">Submit Purchase & Update Stock</button>
+            <button type="submit" class="btn btn-primary w-100 py-3 fs-5 fw-bold shadow-sm">
+                <i class="fa-solid fa-check me-2"></i> Submit Purchase & Update Stock
+            </button>
         </div>
     </div>
 </form>
@@ -130,6 +153,7 @@
             var row = $('#purchaseItems tr:first').clone();
             row.find('input').val(0);
             row.find('.qty-input').val(1);
+            row.find('.subtotal-input').val('0.00');
             row.find('select').val('');
             $('#purchaseItems').append(row);
         });
@@ -142,7 +166,18 @@
             }
         });
 
-        // Calculate Row Subtotal
+        // When product selected, auto-fill unit purchase price
+        $(document).on('change', '.product-select', function() {
+            var selectedOption = $(this).find(':selected');
+            var price = parseFloat(selectedOption.data('price')) || 0;
+            var row = $(this).closest('tr');
+            row.find('.price-input').val(price);
+            var qty = parseInt(row.find('.qty-input').val()) || 1;
+            row.find('.subtotal-input').val((price * qty).toFixed(2));
+            calculateTotals();
+        });
+
+        // Calculate Row Subtotal on price or qty change
         $(document).on('input', '.price-input, .qty-input', function() {
             var row = $(this).closest('tr');
             var price = parseFloat(row.find('.price-input').val()) || 0;
@@ -156,6 +191,18 @@
             calculateTotals();
         });
 
+        // Quick pay buttons
+        $('#btnPayFull').click(function() {
+            var grandTotal = parseFloat($('#grandTotal').val()) || 0;
+            $('#paidAmount').val(grandTotal.toFixed(2));
+            calculateTotals();
+        });
+
+        $('#btnPayZero').click(function() {
+            $('#paidAmount').val('0.00');
+            calculateTotals();
+        });
+
         function calculateTotals() {
             var subtotal = 0;
             $('.subtotal-input').each(function() {
@@ -166,11 +213,11 @@
             var discount = parseFloat($('#discountInput').val()) || 0;
             var tax = parseFloat($('#taxInput').val()) || 0;
             
-            var grandTotal = (subtotal - discount) + tax;
+            var grandTotal = Math.max(0, (subtotal - discount) + tax);
             $('#grandTotal').val(grandTotal.toFixed(2));
 
             var paid = parseFloat($('#paidAmount').val()) || 0;
-            var due = grandTotal - paid;
+            var due = Math.max(0, grandTotal - paid);
             $('#dueAmount').val(due.toFixed(2));
         }
     });

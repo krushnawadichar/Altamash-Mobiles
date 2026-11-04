@@ -180,6 +180,38 @@
 
     <!-- Main Content -->
     <main>
+        @if(session('success'))
+            <div class="container mt-3">
+                <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 d-flex align-items-center" role="alert">
+                    <i class="fa-solid fa-circle-check fs-5 me-2"></i>
+                    <div>{{ session('success') }}</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="container mt-3">
+                <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 d-flex align-items-center" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation fs-5 me-2"></i>
+                    <div>{{ session('error') }}</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        @endif
+        @if($errors->any())
+            <div class="container mt-3">
+                <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0" role="alert">
+                    <div class="fw-bold mb-1"><i class="fa-solid fa-circle-exclamation me-1"></i> Please check the following:</div>
+                    <ul class="mb-0 ps-3">
+                        @foreach($errors->all() as $err)
+                            <li>{{ $err }}</li>
+                        @endforeach
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        @endif
+
         @yield('content')
     </main>
 
@@ -190,7 +222,7 @@
                 <div class="col-lg-4 col-md-6">
                     <h5 class="d-flex align-items-center mb-3">
                         <img src="{{ asset('build/assets/logos/altmash-logo.jpeg') }}" alt="ALTAMASH MOBILE Logo" style="height: 65px; object-fit: contain;" class="me-2">
-`                    </h5>
+                    </h5>
                     <p class="mt-3 pe-md-4">Your ultimate destination for premium electronics, mobile devices, and expert repair services. Quality guaranteed since 2026.</p>
                     <div class="d-flex gap-3 mt-4">
                         <a href="#" class="text-white fs-5 bg-white bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center hover-scale" style="width: 40px; height: 40px;"><i class="fa-brands fa-facebook-f"></i></a>
@@ -203,7 +235,7 @@
                     <ul class="list-unstyled d-flex flex-column gap-2">
                         <li><a href="{{ route('home') }}">Home</a></li>
                         <li><a href="{{ route('shop') }}">Shop</a></li>
-                        <li><a href="#">About Us</a></li>
+                        <li><a href="{{ route('about') }}">About Us</a></li>
                         <li><a href="{{ route('contact') }}">Contact</a></li>
                     </ul>
                 </div>

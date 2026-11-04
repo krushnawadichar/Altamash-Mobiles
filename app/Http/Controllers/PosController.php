@@ -49,7 +49,7 @@ class PosController extends Controller
             $invoiceNumber = 'INV-' . strtoupper(Str::random(6)) . '-' . time();
 
             $sale = Sale::create([
-                'customer_id' => $request->customer_id,
+                'customer_id' => $request->filled('customer_id') ? $request->customer_id : null,
                 'invoice_number' => $invoiceNumber,
                 'sale_date' => now()->toDateString(),
                 'subtotal' => (float)$request->subtotal,
@@ -79,28 +79,30 @@ class PosController extends Controller
 
                 // Update product stock
                 $product = Product::find($productId);
-                $prevStock = $product->stock_quantity;
-                $newStock = $prevStock - $qty;
-                
-                $product->update([
-                    'stock_quantity' => $newStock
-                ]);
+                if ($product) {
+                    $prevStock = $product->stock_quantity;
+                    $newStock = max(0, $prevStock - $qty);
+                    
+                    $product->update([
+                        'stock_quantity' => $newStock
+                    ]);
 
-                // Log Transaction
-                InventoryTransaction::create([
-                    'product_id' => $productId,
-                    'transaction_type' => 'sale',
-                    'quantity' => $qty,
-                    'previous_stock' => $prevStock,
-                    'new_stock' => $newStock,
-                    'reference' => 'Sale #' . $sale->invoice_number,
-                    'user_id' => auth()->id()
-                ]);
+                    // Log Transaction
+                    InventoryTransaction::create([
+                        'product_id' => $productId,
+                        'transaction_type' => 'sale',
+                        'quantity' => $qty,
+                        'previous_stock' => $prevStock,
+                        'new_stock' => $newStock,
+                        'reference' => 'Sale #' . $sale->invoice_number,
+                        'user_id' => auth()->id()
+                    ]);
+                }
             }
             
-            if ($request->customer_id) {
+            if ($request->filled('customer_id')) {
                 $customer = Customer::find($request->customer_id);
-                $customer->increment('total_purchases', $request->grand_total);
+                $customer?->increment('total_purchases', $request->grand_total);
             }
 
             DB::commit();

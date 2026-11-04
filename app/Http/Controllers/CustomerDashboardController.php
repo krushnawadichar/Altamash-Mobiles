@@ -15,10 +15,15 @@ class CustomerDashboardController extends Controller
         $user = Auth::user();
         $customer = Customer::where('email', $user->email)->first();
         
-        $orders = [];
-        if ($customer) {
-            $orders = Sale::where('customer_id', $customer->id)->with('items.product')->latest()->get();
-        }
+        $orders = Sale::where(function ($q) use ($customer, $user) {
+            if ($customer) {
+                $q->where('customer_id', $customer->id);
+            }
+            $q->orWhere('created_by', $user->id);
+        })
+        ->with('items.product')
+        ->latest('id')
+        ->get();
 
         return view('dashboard', compact('user', 'customer', 'orders'));
     }

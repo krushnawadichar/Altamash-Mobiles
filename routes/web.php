@@ -26,6 +26,7 @@ Route::get('/shop', [FrontendController::class, 'shop'])->name('shop');
 Route::get('/product/{slug}', [FrontendController::class, 'product'])->name('product.show');
 Route::get('/about', [FrontendController::class, 'about'])->name('about');
 Route::get('/contact', [FrontendController::class, 'contact'])->name('contact');
+Route::post('/contact', [FrontendController::class, 'contactSubmit'])->name('contact.submit');
 
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 Route::post('/cart/add/{id}', [CartController::class, 'add'])->name('cart.add');
@@ -50,7 +51,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'role_or_permission:admin|view dashboard'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('dashboard');
     
     Route::resource('brands', BrandController::class)->except(['show']);
@@ -60,6 +61,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     
     Route::resource('suppliers', SupplierController::class)->except(['show']);
     Route::resource('purchases', PurchaseController::class)->only(['index', 'create', 'store', 'show']);
+    Route::post('purchases/{purchase}/pay-due', [PurchaseController::class, 'recordPayment'])->name('purchases.pay-due');
+    Route::get('purchases/{purchase}/print', [PurchaseController::class, 'print'])->name('purchases.print');
     
     Route::get('inventory', [InventoryTransactionController::class, 'index'])->name('inventory.index');
 

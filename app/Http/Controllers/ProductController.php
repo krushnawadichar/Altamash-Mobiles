@@ -201,6 +201,7 @@ class ProductController extends Controller
         $data['stock_quantity'] = $request->filled('stock_quantity') ? (int)$request->stock_quantity : 0;
         $data['min_stock'] = $request->filled('min_stock') ? (int)$request->min_stock : 5;
         $data['barcode'] = $request->filled('barcode') ? trim($request->barcode) : null;
+        $data['sku'] = $request->filled('sku') ? trim($request->sku) : $product->sku;
 
         $product->update($data);
 

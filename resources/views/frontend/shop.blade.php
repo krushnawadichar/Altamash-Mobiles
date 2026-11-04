@@ -91,7 +91,16 @@
                             
                             <div class="mt-auto d-flex justify-content-between align-items-center">
                                 <div class="fw-bold fs-5 text-primary">₹{{ number_format($product->selling_price, 2) }}</div>
-                                <button class="btn btn-sm btn-outline-primary" style="z-index: 2; position: relative;"><i class="fa-solid fa-cart-plus"></i></button>
+                                @if($product->stock_quantity > 0)
+                                    <form action="{{ route('cart.add', $product->id) }}" method="POST" class="m-0" style="z-index: 2; position: relative;">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" title="Add to Cart">
+                                            <i class="fa-solid fa-cart-plus"></i>
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="badge bg-danger-subtle text-danger" style="z-index: 2; position: relative;">Out of stock</span>
+                                @endif
                             </div>
                         </div>
                     </div>

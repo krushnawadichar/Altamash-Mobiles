@@ -315,27 +315,27 @@
             <div class="col-lg-7">
                 <div class="card border-0 shadow-lg rounded-4 p-4 p-md-5 bg-light h-100">
                     <h3 class="fw-bold mb-4">Send us a Message</h3>
-                    <form action="#" method="POST">
+                    <form action="{{ route('contact.submit') }}" method="POST">
                         @csrf
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Full Name</label>
-                                <input type="text" class="form-control form-control-lg border-0 shadow-sm" placeholder="Enter Name" required>
+                                <input type="text" name="name" value="{{ old('name', auth()->user()?->name) }}" class="form-control form-control-lg border-0 shadow-sm" placeholder="Enter Name" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Email Address</label>
-                                <input type="email" class="form-control form-control-lg border-0 shadow-sm" placeholder="Enter Email" required>
+                                <input type="email" name="email" value="{{ old('email', auth()->user()?->email) }}" class="form-control form-control-lg border-0 shadow-sm" placeholder="Enter Email" required>
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Subject</label>
-                                <input type="text" class="form-control form-control-lg border-0 shadow-sm" placeholder="Enter Subject" required>
+                                <input type="text" name="subject" value="{{ old('subject') }}" class="form-control form-control-lg border-0 shadow-sm" placeholder="Enter Subject" required>
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Message</label>
-                                <textarea class="form-control form-control-lg border-0 shadow-sm" rows="4" placeholder="Enter Message" required></textarea>
+                                <textarea name="message" class="form-control form-control-lg border-0 shadow-sm" rows="4" placeholder="Enter Message" required>{{ old('message') }}</textarea>
                             </div>
                             <div class="col-12 mt-4">
-                                <button type="submit" class="btn btn-warning btn-lg rounded-pill px-5 fw-bold shadow-sm w-100 hover-scale text-dark">Send Message</button>
+                                <button type="submit" class="btn btn-warning btn-lg rounded-pill px-5 fw-bold shadow-sm w-100 hover-scale text-dark"><i class="fa-solid fa-paper-plane me-2"></i> Send Message</button>
                             </div>
                         </div>
                     </form>

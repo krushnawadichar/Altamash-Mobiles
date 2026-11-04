@@ -49,23 +49,31 @@
                                         <th>Total</th>
                                         <th>Status</th>
                                         <th>Payment</th>
+                                        <th class="text-end">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($orders as $order)
                                     <tr>
-                                        <td class="fw-bold text-primary">{{ $order->invoice_number }}</td>
+                                        <td class="fw-bold text-primary font-monospace">{{ $order->invoice_number }}</td>
                                         <td>{{ $order->sale_date->format('d M, Y') }}</td>
-                                        <td class="fw-bold">₹{{ number_format($order->grand_total, 2) }}</td>
+                                        <td class="fw-bold text-dark">₹{{ number_format($order->grand_total, 2) }}</td>
                                         <td>
                                             @if($order->payment_status == 'paid')
-                                                <span class="badge bg-success">Processing</span>
+                                                <span class="badge bg-success">Paid</span>
+                                            @elseif($order->payment_status == 'partial')
+                                                <span class="badge bg-warning text-dark">Partial</span>
                                             @else
-                                                <span class="badge bg-warning text-dark">Pending</span>
+                                                <span class="badge bg-danger">Unpaid</span>
                                             @endif
                                         </td>
                                         <td>
                                             <span class="badge bg-light text-dark border">{{ $order->payment_method }}</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="{{ route('invoice.public', $order->invoice_number) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View & Print Invoice">
+                                                <i class="fa-solid fa-file-invoice me-1"></i> Invoice
+                                            </a>
                                         </td>
                                     </tr>
                                     @endforeach

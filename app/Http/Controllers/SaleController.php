@@ -12,13 +12,15 @@ class SaleController extends Controller
     {
         $query = Sale::with('customer')->latest();
 
-        if ($request->has('search') && $request->search != '') {
-            $search = $request->search;
-            $query->where('invoice_number', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%");
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function($q) use ($search) {
+                $q->where('invoice_number', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($cq) use ($search) {
+                      $cq->where('name', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
                   });
+            });
         }
 
         $sales = $query->get();

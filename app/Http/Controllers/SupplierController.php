@@ -10,8 +10,10 @@ class SupplierController extends Controller
 {
     public function index()
     {
-        $suppliers = Supplier::latest()->get();
-        return view('admin.suppliers.index', compact('suppliers'));
+        $suppliers = Supplier::with('purchases')->latest()->get();
+        $totalSupplierDue = $suppliers->sum(fn($s) => $s->total_due);
+        $totalSupplierPurchases = $suppliers->sum(fn($s) => $s->total_purchases);
+        return view('admin.suppliers.index', compact('suppliers', 'totalSupplierDue', 'totalSupplierPurchases'));
     }
 
     public function create()
