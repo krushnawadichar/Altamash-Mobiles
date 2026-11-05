@@ -13,6 +13,8 @@ use App\Models\Sale;
 use App\Models\Supplier;
 use App\Models\Purchase;
 use App\Models\PurchaseItem;
+use App\Models\Repair;
+use App\Models\RepairItem;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 
@@ -384,5 +386,257 @@ class StorefrontAndAdminFlowTest extends TestCase
         $response->assertSee('Alpha Distributors');
         $response->assertSee('PURCHASE BILL');
     }
+
+    public function test_admin_can_create_repair_with_materials_and_calculate_profit(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $repairData = [
+            'customer_name' => 'Amit Sharma',
+            'customer_phone' => '9822334455',
+            'device_name' => 'iPhone 13 Pro',
+            'problem_description' => 'Broken front display and damaged battery',
+            'received_date' => now()->toDateString(),
+            'expected_delivery' => now()->addDays(2)->toDateString(),
+            'status' => 'In Progress',
+            'service_charge' => 1500,
+            'final_cost' => 5000,
+            'advance_payment' => 2000,
+            'payment_method' => 'UPI',
+            'technician_notes' => 'Customer requested original panel replacement',
+            'material_names' => ['OLED Display Panel', '5000mAh Replacement Battery'],
+            'material_quantities' => [1, 1],
+            'material_costs' => [2500, 1000],
+            'material_product_ids' => [null, null],
+        ];
+
+        $response = $this->actingAs($admin)->post(route('admin.repairs.store'), $repairData);
+
+        $repair = Repair::where('customer_name', 'Amit Sharma')->first();
+        $this->assertNotNull($repair);
+        $response->assertRedirect(route('admin.repairs.show', $repair));
+
+        // Check material cost = 2500 + 1000 = 3500
+        $this->assertEquals(3500, $repair->material_cost);
+        $this->assertEquals(1500, $repair->service_charge);
+        $this->assertEquals(5000, $repair->final_cost);
+
+        // Check paid = 2000, due = 3000
+        $this->assertEquals(2000, $repair->paid_amount);
+        $this->assertEquals(3000, $repair->due_amount);
+        $this->assertEquals('partial', $repair->payment_status);
+
+        // Check profit = 5000 - 3500 = 1500
+        $this->assertEquals(1500, $repair->profit);
+
+        // Check 2 repair items created
+        $this->assertCount(2, $repair->items);
+        $this->assertEquals('OLED Display Panel', $repair->items->first()->item_name);
+        $this->assertEquals(2500, $repair->items->first()->unit_cost);
+    }
+
+    public function test_admin_can_record_repair_customer_due_payment_and_settle(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $repair = Repair::create([
+            'repair_code' => 'REP-TEST-123',
+            'customer_name' => 'Vikram Patil',
+            'customer_phone' => '9123456789',
+            'device_name' => 'Samsung S22',
+            'problem_description' => 'Charging port replacement',
+            'received_date' => now(),
+            'material_cost' => 800,
+            'service_charge' => 700,
+            'final_cost' => 1500,
+            'advance_payment' => 500,
+            'paid_amount' => 500,
+            'due_amount' => 1000,
+            'profit' => 700,
+            'payment_status' => 'partial',
+            'status' => 'Ready',
+        ]);
+
+        // Pay pending balance of 1,000
+        $response = $this->actingAs($admin)->post(route('admin.repairs.pay-due', $repair->id), [
+            'amount' => 1000,
+            'payment_method' => 'Cash',
+            'payment_reference' => 'CASH-DELIVERY',
+            'payment_notes' => 'Received at device handover',
+        ]);
+
+        $response->assertRedirect();
+        $repair->refresh();
+
+        $this->assertEquals(1500, $repair->paid_amount);
+        $this->assertEquals(0, $repair->due_amount);
+        $this->assertEquals('paid', $repair->payment_status);
+        $this->assertEquals('Delivered', $repair->status);
+        $this->assertStringContainsString('CASH-DELIVERY', $repair->technician_notes);
+    }
+
+    public function test_repair_due_payment_rejects_exceeding_amount(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $repair = Repair::create([
+            'repair_code' => 'REP-DUE-999',
+            'customer_name' => 'Suresh Raina',
+            'customer_phone' => '9988771122',
+            'device_name' => 'OnePlus Nord',
+            'problem_description' => 'Speaker crackling',
+            'received_date' => now(),
+            'material_cost' => 300,
+            'final_cost' => 1000,
+            'paid_amount' => 600,
+            'due_amount' => 400,
+            'profit' => 700,
+            'payment_status' => 'partial',
+            'status' => 'In Progress',
+        ]);
+
+        // Attempt to pay 600 when only 400 is due
+        $response = $this->actingAs($admin)->post(route('admin.repairs.pay-due', $repair->id), [
+            'amount' => 600,
+            'payment_method' => 'UPI',
+        ]);
+
+        $response->assertSessionHasErrors(['amount']);
+        $this->assertEquals(400, $repair->fresh()->due_amount);
+    }
+
+    public function test_repair_show_and_print_views_render_successfully(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $repair = Repair::create([
+            'repair_code' => 'REP-SHOW-111',
+            'customer_name' => 'Pooja Verma',
+            'customer_phone' => '9765432100',
+            'device_name' => 'Vivo V27',
+            'problem_description' => 'Camera lens glass cracked',
+            'received_date' => now(),
+            'material_cost' => 500,
+            'service_charge' => 500,
+            'final_cost' => 1000,
+            'paid_amount' => 1000,
+            'due_amount' => 0,
+            'profit' => 500,
+            'payment_status' => 'paid',
+            'status' => 'Delivered',
+        ]);
+
+        $repair->items()->create([
+            'item_name' => 'Original Camera Glass Ring',
+            'quantity' => 1,
+            'unit_cost' => 500,
+            'total_cost' => 500,
+        ]);
+
+        // Show view
+        $showResponse = $this->actingAs($admin)->get(route('admin.repairs.show', $repair->id));
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('REP-SHOW-111');
+        $showResponse->assertSee('Pooja Verma');
+        $showResponse->assertSee('Original Camera Glass Ring');
+
+        // Print view
+        $printResponse = $this->actingAs($admin)->get(route('admin.repairs.print', $repair->id));
+        $printResponse->assertStatus(200);
+        $printResponse->assertSee('REPAIR RECEIPT');
+        $printResponse->assertSee('REP-SHOW-111');
+    }
+
+    public function test_common_mobile_number_handler_is_loaded_on_pages(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        // Check file exists on filesystem
+        $this->assertFileExists(public_path('js/mobile-input-handler.js'));
+
+        // Check loaded on public storefront
+        $homeResponse = $this->get('/');
+        $homeResponse->assertStatus(200);
+        $homeResponse->assertSee('mobile-input-handler.js');
+
+        // Check loaded on admin dashboard
+        $adminResponse = $this->actingAs($admin)->get(route('admin.dashboard'));
+        $adminResponse->assertStatus(200);
+        $adminResponse->assertSee('mobile-input-handler.js');
+
+        // Check loaded on repairs create page
+        $repairCreateResponse = $this->actingAs($admin)->get(route('admin.repairs.create'));
+        $repairCreateResponse->assertStatus(200);
+        $repairCreateResponse->assertSee('mobile-input-handler.js');
+    }
+
+    public function test_admin_can_create_repair_with_direct_material_cost_and_update_it(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        // Create repair with direct manual material cost (no spare part rows)
+        $repairData = [
+            'customer_name' => 'Vikram Patil',
+            'customer_phone' => '9123456789',
+            'device_name' => 'Samsung S22 Ultra',
+            'problem_description' => 'Charging port damaged',
+            'received_date' => now()->toDateString(),
+            'status' => 'Received',
+            'material_cost' => 600,
+            'service_charge' => 400,
+            'final_cost' => 1000,
+            'advance_payment' => 500,
+            'payment_method' => 'Cash',
+        ];
+
+        $response = $this->actingAs($admin)->post(route('admin.repairs.store'), $repairData);
+        $repair = Repair::where('customer_name', 'Vikram Patil')->first();
+        $this->assertNotNull($repair);
+        $response->assertRedirect(route('admin.repairs.show', $repair));
+
+        $this->assertEquals(600, $repair->material_cost);
+        $this->assertEquals(400, $repair->service_charge);
+        $this->assertEquals(1000, $repair->final_cost);
+        $this->assertEquals(500, $repair->paid_amount);
+        $this->assertEquals(500, $repair->due_amount);
+        $this->assertEquals(400, $repair->profit); // 1000 - 600 = 400
+        $this->assertEquals('partial', $repair->payment_status);
+
+        // Update the repair with new revised figures
+        $updateData = [
+            'customer_name' => 'Vikram Patil',
+            'customer_phone' => '9123456789',
+            'device_name' => 'Samsung S22 Ultra',
+            'problem_description' => 'Charging port damaged and microphone cleaned',
+            'received_date' => now()->toDateString(),
+            'status' => 'Ready',
+            'material_cost' => 700,
+            'service_charge' => 500,
+            'final_cost' => 1200,
+            'paid_amount' => 1200,
+            'payment_method' => 'UPI',
+        ];
+
+        $updateResponse = $this->actingAs($admin)->put(route('admin.repairs.update', $repair), $updateData);
+        $updateResponse->assertRedirect(route('admin.repairs.show', $repair));
+
+        $repair->refresh();
+        $this->assertEquals(700, $repair->material_cost);
+        $this->assertEquals(500, $repair->service_charge);
+        $this->assertEquals(1200, $repair->final_cost);
+        $this->assertEquals(1200, $repair->paid_amount);
+        $this->assertEquals(0, $repair->due_amount);
+        $this->assertEquals(500, $repair->profit); // 1200 - 700 = 500
+        $this->assertEquals('paid', $repair->payment_status);
+        $this->assertEquals('Ready', $repair->status);
+    }
 }
+
+
 

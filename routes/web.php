@@ -75,7 +75,9 @@ Route::middleware(['auth', 'role_or_permission:admin|view dashboard'])->prefix('
     Route::post('pos', [PosController::class, 'store'])->name('pos.store');
 
     Route::resource('expenses', ExpenseController::class)->except(['show', 'edit', 'update']);
-    Route::resource('repairs', RepairController::class)->except(['show']);
+    Route::resource('repairs', RepairController::class);
+    Route::post('repairs/{repair}/pay-due', [RepairController::class, 'recordPayment'])->name('repairs.pay-due');
+    Route::get('repairs/{repair}/print', [RepairController::class, 'print'])->name('repairs.print');
 
     Route::resource('users', UserController::class);
     Route::resource('roles', RoleController::class);

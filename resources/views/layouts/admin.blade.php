@@ -97,6 +97,18 @@
                 display: block;
             }
         }
+        /* Remove number input up/down spin buttons across browsers */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none !important;
+            margin: 0 !important;
+        }
+        input[type=number] {
+            -moz-appearance: textfield !important;
+            appearance: textfield !important;
+        }
     </style>
     @stack('styles')
 </head>
@@ -339,6 +351,7 @@
             });
         });
     </script>
+    <script src="{{ asset('js/mobile-input-handler.js') }}"></script>
     @include('components.whatsapp-invoice-modal')
     @stack('scripts')
 </body>

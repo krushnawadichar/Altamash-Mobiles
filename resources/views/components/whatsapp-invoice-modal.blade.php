@@ -32,8 +32,8 @@
                         </span>
                         <input type="tel" 
                                id="waCustomerPhoneInput" 
-                               class="form-control form-control-lg fw-bold number-only border-success" 
-                               maxlength="15" 
+                               class="form-control form-control-lg fw-bold number-only mobile-number border-success" 
+                               maxlength="10" 
                                placeholder="10-digit mobile number" 
                                autocomplete="off">
                     </div>

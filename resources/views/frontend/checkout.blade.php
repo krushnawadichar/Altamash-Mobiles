@@ -31,8 +31,8 @@
                                 <input type="text" name="name" class="form-control" value="{{ old('name') }}" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Phone Number <span class="text-danger">*</span></label>
-                                <input type="text" name="phone" class="form-control" value="{{ old('phone') }}" required>
+                                <label class="form-label">Mobile Number <span class="text-danger">*</span></label>
+                                <input type="tel" name="phone" class="form-control mobile-number" maxlength="10" placeholder="10-digit mobile number" value="{{ old('phone') }}" required>
                             </div>
                         </div>
 
